@@ -1,3 +1,5 @@
+No Right reserved.  All files are in public domain.  Author claims no responsbility for using any of the files.
+
 # Howell Movement Cards and Scoring Spreadsheet
 
 Here we have the necessary document to conduct a Bridge Howell tournament for 6 to 14 pairs (3 to 7 tables).  They are designed for the tournament director (TD) and/or organizer.
