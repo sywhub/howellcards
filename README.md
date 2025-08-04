@@ -36,7 +36,7 @@ Howell's solved the Room Square problem quite cleverly.  We got the hint of his 
 
 ## Technical Requirements
 
-There are Python programs used to generate these files.  At this moment, I have not uploaded them to GitHub yet.  What follow are general design points.  I have not written down the algorithm in prose form.  It exists in the form of these python code.
+The "src" directory has Python programs used to generate these files.  TD should just ignore them.  The ensuing text describes the general design concepts.  Non-techie please stop reading. 
 
 ### Requirement: Seating and Movement
 
