@@ -1,4 +1,12 @@
 No Right reserved.  All files are in public domain.  Author claims no responsbility for using any of the files.
+# TOC
+This directory contains necessary PDF and Excel files for team tournament and various Howell tournaments.
+The files come in pairs with matching names differ only by their extention of "PDF" or "xlsx".  The diretor should print out the PDF file ahead of the time.
+
+# Team Match
+This is a simple 2-table team match setup.  The expectation is 2 pairs per team to play 2 rounds of 8 boards.  The tables swap boards after playing for 4 boards.  Then one team swap pairing after 8 boards.  Each table keeps a scoring sheet on the table and tally all up after the match.  The spreadsheet uses converts contract scores to IMPs.
+
+You can change the format for # of rounds, boards per round, and switches per round.
 
 # Howell Movement Cards and Scoring Spreadsheet
 
