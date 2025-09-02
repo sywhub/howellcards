@@ -1,4 +1,11 @@
-{"6": 	 // 6 pairs
+{"5": 	 // 5 pairs
+	{Rounds: 4, Tables: 3, BoardMovement: null, Arrangement:
+		[[{NS: 0, EW: 1, Board: 0}, {NS: 3, EW: 4, Board: 1}, {NS: 5, EW: 2, Board: 3}],
+		[{NS: 0, EW: 2, Board: 1}, {NS: 4, EW: 5, Board: 2}, {NS: 1, EW: 3, Board: 3}],
+		[{NS: 0, EW: 3, Board: 2}, {NS: 5, EW: 1, Board: 1}, {NS: 2, EW: 4, Board: 0}],
+		[{NS: 0, EW: 4, Board: 3}, {NS: 1, EW: 2, Board: 2}, {NS: 3, EW: 5, Board: 0}],
+		[{NS: 0, EW: 5, Board: 4}, {NS: 2, EW: 3, Board: 4}, {NS: 4, EW: 1, Board: 4}]]},
+"6": 	 // 6 pairs
 	{Rounds: 5, Tables: 3, BoardMovement: null, Arrangement:
 		[[{NS: 6, EW: 1, Board: 0}, {NS: 3, EW: 4, Board: 1}, {NS: 5, EW: 2, Board: 3}],
 		[{NS: 6, EW: 2, Board: 1}, {NS: 4, EW: 5, Board: 2}, {NS: 1, EW: 3, Board: 3}],

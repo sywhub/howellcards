@@ -3,6 +3,7 @@
 # File "setup.json" was separately generated. We load from it and validate the data
 # are indeed good for tournament.
 import logging
+import os
 import json5    # JSON5 supposedly can handle comments
 from maininit import setlog
 from tables import HowellSeats
@@ -32,7 +33,8 @@ class JsonIO:
         return chr(ord('A')+bIdx)
 
     def getFileName(self):
-        return self.fname
+        here = os.path.dirname(os.path.abspath(__file__))
+        return f'{here}/{self.fname}'
 
     # data conversion from previous algorithm-based result
     # This is used really just once (or occassionally) to regenerate data
@@ -65,8 +67,10 @@ class JsonIO:
             self.fname = fname
         self.log.info('Loading data file')
         try:
-            with open(self.getFileName(), 'r') as f:
-                loadObj = json5.load(f)
+            fn = self.getFileName()
+            if os.path.exists(fn):
+                with open(self.getFileName(), 'r') as f:
+                    loadObj = json5.load(f)
         except:
             self.log.error('JSON load failed')
             return None
@@ -217,7 +221,7 @@ class JsonIO:
 if __name__ == '__main__':
     log = setlog('jsonIO', None)
     log.setLevel(logging.DEBUG)
-    for p in range(6,15):
+    for p in range(5,15):
         jIO = JsonIO(p, log)
         print(f'--- {p} pairs ---')
         jObj = jIO.load()
