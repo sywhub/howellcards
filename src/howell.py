@@ -44,5 +44,5 @@ if __name__ == '__main__':
     if args.pair is not None and args.pair >= 5 and args.pair <= 14:
         howellFromJson(log, args.pair, args.fake, args.jsonfile)
     elif args.pair is None:
-        for p in range(6,15):
+        for p in range(5,15):
             howellFromJson(log, p, args.fake, args.jsonfile)

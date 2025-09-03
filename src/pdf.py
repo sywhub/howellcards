@@ -54,6 +54,15 @@ class PDF(FPDF):
         self.cell(text=txt)
         return
 
+    def footer(self):
+        if not hasattr(self, 'Pairs') or not hasattr(self, 'Tables'):
+            return
+        footerText = f'Howell Movement for {self.Pairs} Pairs and {self.Tables} Tables'
+        self.set_font(size=PDF.tinyPt)
+        self.set_y(self.eph - self.pt2in(self.font_size_pt))
+        self.set_x(self.margin)
+        self.cell(text=footerText)
+
     # meta information for the tournament
     def meta(self, log, title, meta):
         self.set_font(style='B', size=PDF.headerPt)
@@ -73,6 +82,7 @@ class PDF(FPDF):
             self.set_font(size=PDF.linePt)
             self.cell(2, h, text=m[0])
             if len(m) > 1:
+                setattr(self, m[0], m[1])
                 self.set_xy(x+tab, line)
                 self.set_font(style='I', size=PDF.linePt)
                 self.cell(2*h, h, text=f'{m[1]}', align='R')
@@ -110,6 +120,7 @@ class PDF(FPDF):
     # Sign-up sheet
     def roster(self, log, rows, headers):
         self.add_page() # new page
+        self.footer()
         self.set_font(self.serifFont, style='B', size=PDF.rosterPt) 
         h = self.lineHeight(self.font_size_pt)
         title = 'Player Pairings'
@@ -151,6 +162,7 @@ class PDF(FPDF):
         self.firstRound(data)
         for t,v in data.items():
             self.add_page()
+            self.footer()
             self.movementSheet()
             self.compass()
             self.moveInstruction(t, v['nsNext'], v['ewNext'])
@@ -390,6 +402,7 @@ class PDF(FPDF):
             for d in range(nDeck):
                 if bIdx % 4 == 0:
                     self.add_page()
+                    self.footer()
                     y = 0.5
                 self.set_xy(xMargin, y)
                 self.set_font(style='B', size=PDF.headerPt)
