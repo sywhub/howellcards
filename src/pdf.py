@@ -141,6 +141,12 @@ class PDF(FPDF):
             self.set_xy(xstart, y)
 
     def tableOut(self, data):
+        def roundBoards(cols, tCol0, tCol2, tCol3, v, i):
+            self.cell(cols[0], h, text=tCol0, align='C', border=1)
+            self.cell(cols[1], h, text=f"{v[i][0]['NS']}", align='C', border=1)
+            self.cell(cols[2], h, text=tCol2, align='C', border=1)
+            self.cell(cols[3], h, text=tCol3, align='C', border=1)
+
         self.overview(data)
         self.firstRound(data)
         for t,v in data.items():
@@ -168,13 +174,36 @@ class PDF(FPDF):
             saveFont = self.font_family
             self.set_font(self.fixedWidthFont, size=PDF.bigPt)
             h = self.lineHeight(self.font_size_pt)
-            for i in range(v['nRound']):
-                self.cell(cols[0], h, text=f'{i+1}', align='C', border=1)
-                self.cell(cols[1], h, text=f"{v[i][0]['NS']}", align='C', border=1)
-                self.cell(cols[2], h, text=f"{v[i][0]['EW']}", align='C', border=1)
-                self.cell(cols[3], h, text=f"{v[i][1]}", align='C', border=1)
+
+            # Save the last round for special handling
+            for i in range(v['nRound'] - 1):
+                roundBoards(cols, f'{i+1}', f"{v[i][0]['EW']}", f"{v[i][1]}", v, i)
                 y += h
                 self.set_xy(x, y)
+
+            # Last round
+            i = v['nRound'] - 1
+            # case of 5 or 6 pairs, the last round has a special board arrangement
+            if v['nRound'] == 5 and i == 4:
+                # special case of 6 pairs
+                pBoards = [x.strip() for x in v[i][1].split('&')]
+                esRotate = [5, 3, 1]
+                if data[0][0][0]['NS'] != 0:    # 5 pairs
+                    for bIdx in range(len(pBoards)):
+                        b = pBoards[(bIdx+t)%len(pBoards)]
+                        roundBoards(cols, f'{i+1}', f"{v[i][0]['EW']}", b, v, i)
+                        y += h
+                        self.set_xy(x, y)
+                else:
+                    for bIdx in range(len(pBoards)):
+                        b = pBoards[(bIdx+t+3)%len(pBoards)]
+                        esTable = f'{esRotate[(bIdx+t)%len(esRotate)]}'
+                        roundBoards(cols, f'{i+1}', esTable, b, v, i)    
+                        y += h
+                        self.set_xy(x, y)
+            else:
+                # normal case
+                roundBoards(cols, f'{i+1}', f"{v[i][0]['EW']}", f"{v[i][1]}", v, i)
             
             self.set_font(saveFont)
         return
