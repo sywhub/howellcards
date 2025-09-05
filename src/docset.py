@@ -157,8 +157,8 @@ class HowellDocSet(DupBridge):
 		self.Traveler()
 		self.IMPTable()
 		self.ScoreTable()
-		self.wb.save(f'{self.here}/../howell_{self.pairs}.xlsx')
-		self.pdf.output(f'{self.here}/../howell_{self.pairs}.pdf')
+		self.wb.save(f'{self.here}/../howell{self.pairs}.xlsx')
+		self.pdf.output(f'{self.here}/../howell{self.pairs}.pdf')
 
 	# string to enumerate a "board set" into individual decks
 	def boardSet(self, bIdx):

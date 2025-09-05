@@ -6,6 +6,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 import pdf
 from docset import DupBridge
+import datetime
 
 class TeamMatch(DupBridge):
     def __init__(self, leg):
@@ -29,10 +30,11 @@ class TeamMatch(DupBridge):
         headers = ['Team', 'Pairs']
         pdfWidths = [x * self.pdf.epw / 100 for x in [10, 80]]
 
+        self.pdf.add_page()
         self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
+        self.pdf.set_y(self.pdf.margin + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
         self.pdf.cell(w=self.pdf.epw, text='Team Match Roster', align='C')
-        self.pdf.ln()
-        self.pdf.ln()
+        self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
         for t in range(2):
             ws.cell(1, 2*t+2).value = f'Team {t+1}'
             ws.cell(1, 2*t+2).font = self.HeaderFont
@@ -168,7 +170,50 @@ class TeamMatch(DupBridge):
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
 
+    # part of the meta pagee 
+    # Some text for the TD/Organizer
+    def Instructions(self):
+        txt = '''There is a matching spreadsheet for this PDF.
+               Print this PDF before the match.
+               Have both teams sign in the roster page.
+               Team 1 sits NS of table 1, EW of table 2.  Team 2 sits EW of table 1, NS of table 2.
+               Place the scoring sheet on each of the table.
+               Put boards 1 to 4 on table 1, 5 to 8 on table 2. Each table shuffle and play the boards.
+               When done, swap the boards and continue.
+               Team 2 pairs swap seats to their team mates of the other table.
+               Put boards 9 to 12 on table 1, 13 to 16 on table 2.
+               Shuffle, play, swap boards, finish all boards.
+               Collect both scoring sheets, and enter the results in the spreadsheet.'''
+        # wherever we are
+        notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
+        self.pdf.set_font(size=self.pdf.tinyPt)
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        w = self.pdf.get_string_width(notice)
+        x = self.pdf.setHCenter(w)
+        self.pdf.set_xy(x, h)
+        self.pdf.cell(text=notice)
+        self.pdf.set_font(style='B', size=self.pdf.headerPt)
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        line = h * 3
+        toWrite = 'Team Match Setup'
+        w = self.pdf.get_string_width(toWrite)
+        x = self.pdf.setHCenter(w)
+        self.pdf.set_xy(x, line)
+        self.pdf.cell(text=toWrite)
+        y = self.pdf.get_y()+1
+        self.pdf.set_font(size=self.pdf.linePt)
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        nLine = 1
+        for t in txt.split('\n'):
+            self.pdf.set_xy(1, y)
+            self.pdf.cell(h, h, f'{nLine}.', align='R')
+            self.pdf.set_xy(1+h, y)
+            self.pdf.multi_cell(self.pdf.epw-2, h=h, text=t.strip())
+            y = self.pdf.get_y()
+            nLine += 1
+
     def match(self):
+        self.Instructions()
         self.Roster()
         self.Boards()
         self.ScoreSheet()
