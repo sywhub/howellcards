@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Generate a team match setup
+#   A PDF with Roster and Score sheets
+#   An Excel spreadsheet to enter the results and calculate the scores
 import argparse
 import logging
 from maininit import setlog
@@ -9,7 +12,7 @@ from docset import DupBridge
 import datetime
 
 class TeamMatch(DupBridge):
-    def __init__(self, leg):
+    def __init__(self, log):
         super().__init__(log)
         self.pdf = pdf.PDF()
         self.wb = Workbook()
@@ -19,51 +22,30 @@ class TeamMatch(DupBridge):
         self.vulTbl = ['None', 'NS', 'EW', 'Both']
         self.Fake = True
 
+    # record metadata
     def setup(self, rounds, boards, switch, fake):
         self.boardPerSwitch = boards
         self.switchPerRound = switch
         self.Rounds = rounds
         self.Fake = fake
 
-    def Roster(self):
+    # Roster is rather simple, just 2 teams of 2 pairs
+    def rosterSheet(self):
         ws = self.wb.active
-        headers = ['Team', 'Pairs']
-        pdfWidths = [x * self.pdf.epw / 100 for x in [10, 80]]
-
-        self.pdf.add_page()
-        self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
-        self.pdf.set_y(self.pdf.margin + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
-        self.pdf.cell(w=self.pdf.epw, text='Team Match Roster', align='C')
-        self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
         for t in range(2):
             ws.cell(1, 2*t+2).value = f'Team {t+1}'
             ws.cell(1, 2*t+2).font = self.HeaderFont
             ws.cell(1, 2*t+2).alignment = self.centerAlign
             ws.merge_cells(f'{ws.cell(1,2*t+2).coordinate}:{ws.cell(1,2*t+3).coordinate}')
-
         row = 2
         for pair in range(2):
             ws.cell(row, 1).value = f'Pair {pair+1}'
             ws.cell(row, 1).font = self.HeaderFont
-            i = 0
-            self.pdf.set_font(style='B', size=self.pdf.headerPt, family=self.pdf.serifFont)
-            for h in headers:
-                self.pdf.cell(w=pdfWidths[i], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'{h}', align='C', border=1)
-                i += 1
-            self.pdf.ln()
-            self.pdf.set_font(style='', size=self.pdf.linePt, family=self.pdf.sansSerifFont)
-            self.pdf.cell(w=pdfWidths[0], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'Pair 1', align='C', border=1)
-            self.pdf.cell(w=pdfWidths[1]/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
-            self.pdf.cell(w=pdfWidths[1]/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
-            self.pdf.ln()
-            self.pdf.cell(w=pdfWidths[0], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'Pair 2', align='C', border=1)
-            self.pdf.cell(w=pdfWidths[1]/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
-            self.pdf.cell(w=pdfWidths[1]/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
-            self.pdf.ln()
-            for team in range(2):
-                ws.cell(row,2*team+2).value = self.placeHolderName()
-                ws.cell(row,2*team+3).value = self.placeHolderName()
+            for p in range(2):
+                ws.cell(row,2*p+2).value = self.placeHolderName()
+                ws.cell(row,2*p+3).value = self.placeHolderName()
             row += 1
+        # Excel Formula for IMP scores
         ws.cell(row, 1).value = 'Total IMP'
         ws.cell(row, 3).value = f'=SUM(Boards!I3:I{self.boardPerSwitch*self.switchPerRound*self.Rounds*2+2})'
         ws.cell(row, 5).value = f'=SUM(Boards!J3:J{self.boardPerSwitch*self.switchPerRound*self.Rounds*2+2})'
@@ -74,16 +56,47 @@ class TeamMatch(DupBridge):
             ws.cell(row, i).font = self.HeaderFont
             ws.cell(row, i).alignment = self.centerAlign
 
+    def Roster(self):
+        self.rosterSheet()
+
+        # convert percents into inches
+        headers = {'Team': self.pdf.epw * 0.05, 'Pairs': self.pdf.epw * 0.1, 'Name': self.pdf.epw * 0.7}
+
+        self.pdf.add_page()
+        self.headerFooter()
+        self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
+        self.pdf.set_y(self.pdf.margin + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
+        self.pdf.cell(w=self.pdf.epw, text='Team Match Roster', align='C')
+        self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
+
+        for team in range(1,3):
+            self.pdf.set_font(style='B', size=self.pdf.bigPt, family=self.pdf.serifFont)
+            self.pdf.set_x(self.pdf.margin+headers['Team'])
+            self.pdf.cell(text=f'Team {team}')
+            self.pdf.ln()
+            for p in range(1,3):
+                self.pdf.set_font(style='', size=self.pdf.linePt, family=self.pdf.sansSerifFont)
+                self.pdf.set_x(self.pdf.margin+headers['Team'])
+                self.pdf.cell(w=headers['Pairs'], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'Pair {p}', align='C', border=1)
+                self.pdf.cell(w=headers['Name']/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
+                self.pdf.cell(w=headers['Name']/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
+                self.pdf.ln()
+            self.pdf.ln()
+
+    # Table of boards played
     def Boards(self):
         self.wb.create_sheet('Boards')
         ws = self.wb['Boards']
         col = 7
+        # merged columns
         for h in ['Score', 'IMP']:
             ws.cell(1, col).value = h
             ws.cell(1, col).font = self.HeaderFont
             ws.cell(1, col).alignment = self.centerAlign
             ws.merge_cells(f'{ws.cell(1,col).coordinate}:{ws.cell(1,col+1).coordinate}')
             col += 2
+
+        # next row is the headers
         col = 1
         headers = ['Board', 'Vul', 'Table', 'Contract', 'By', 'Result', 'NS', 'EW', 'NS', 'EW']
         row = self.headerRow(ws, headers, 2)
@@ -106,16 +119,7 @@ class TeamMatch(DupBridge):
                 ws.cell(row, i).border = Border(bottom=bd)
             row += 1
 
-    def boardHeaders(self, ws):
-        for h in headers:
-            ws.cell(2, col).value = h
-            ws.cell(2, col).font = Font(bold=True)
-            ws.cell(2, col).alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-            bd = Side(style='thin', color='000000')
-            ws.cell(2, col).border = Border(bottom=bd)
-            col += 1
-        return 3;
-
+    # Fake a score to test IMP calculation
     def fakeCOntracts(self, ws, row):
         import random
         if self.Fake:
@@ -126,25 +130,36 @@ class TeamMatch(DupBridge):
         else:
             ws.cell(row, 7).value = 10
 
+    # Paper scoring sheet for each table
+    # Excel tabs are not really needed.
     def ScoreSheet(self):
         headers = ['Board', 'Contract', 'By', 'Result']
         pdfWidths = [x * self.pdf.epw / 100 for x in [10, 40, 15, 25]]
         roundHeight = self.pdf.eph / self.Rounds
         for t in range(2):
             self.pdf.add_page()
+            self.headerFooter()
             self.wb.create_sheet(f'Table{t+1} Scores')
             row = 1
             startBoard = 1
             for r in range(1, self.Rounds + 1):
                 ws = self.wb[f'Table{t+1} Scores']
-                self.pdf.set_y(self.pdf.margin + (r - 1) * roundHeight)
-                self.pdf.set_font(style='B', size=self.pdf.rosterPt, family=self.pdf.serifFont)
-                self.pdf.cell(text=f'Table {t+1}: Round {r}', align='C')
-                self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt))
-                self.pdf.set_font(style='B', size=self.pdf.titlePt)
-                row = self.headerRow(ws, [f'Table {t+1}: Round {r}'], row)
+                row = self.headerRow(ws, [f'Table {t+1}, Round {r}'], row)
                 ws.merge_cells(f'{ws.cell(row-1,1).coordinate}:{ws.cell(row-1,len(headers)+1).coordinate}')
                 row = self.headerRow(ws, headers, row)
+
+                # PDF part
+                self.pdf.set_y(self.pdf.margin + (r - 1) * roundHeight)
+                self.pdf.set_font(style='B', size=self.pdf.rosterPt, family=self.pdf.serifFont)
+                self.pdf.cell(text=f'Table {t+1}, Round {r}')
+                if r > 1:
+                    x = self.pdf.get_x()
+                    ydiff = self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt)
+                    self.pdf.set_font(style='B', size=self.pdf.linePt, family=self.pdf.serifFont)
+                    ydiff -= self.pdf.lineHeight(self.pdf.font_size_pt*1.25)
+                    self.pdf.set_xy(x, ydiff)
+                    self.pdf.cell(text='(EW Change Seats)')
+                self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt)*.5)
                 self.pdf.set_font(style='B', size=self.pdf.headerPt, family=self.pdf.sansSerifFont)
                 self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt))
                 i = 0
@@ -153,6 +168,9 @@ class TeamMatch(DupBridge):
                     i += 1
                 self.pdf.ln()
                 self.pdf.set_font(style='', size=self.pdf.linePt)
+
+                # Mix PDF and Excel code
+                self.pdf.set_font(size=self.pdf.linePt, family=self.pdf.sansSerifFont)
                 for board in range(startBoard, self.boardPerSwitch * self.switchPerRound + startBoard):
                     ws.cell(row, 1).value = board
                     self.pdf.cell(w=pdfWidths[0], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'{board}', align='C', border=1)
@@ -163,6 +181,7 @@ class TeamMatch(DupBridge):
                 startBoard = board + 1
                 row += 1
 
+    # Output into filesystem
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
@@ -170,7 +189,6 @@ class TeamMatch(DupBridge):
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
 
-    # part of the meta pagee 
     # Some text for the TD/Organizer
     def Instructions(self):
         txt = '''There is a matching spreadsheet for this PDF.
@@ -184,14 +202,7 @@ class TeamMatch(DupBridge):
                Put boards 9 to 12 on table 1, 13 to 16 on table 2.
                Shuffle, play, swap boards, finish all boards.
                Collect both scoring sheets, and enter the results in the spreadsheet.'''
-        # wherever we are
-        notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
-        self.pdf.set_font(size=self.pdf.tinyPt)
-        h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        w = self.pdf.get_string_width(notice)
-        x = self.pdf.setHCenter(w)
-        self.pdf.set_xy(x, h)
-        self.pdf.cell(text=notice)
+        self.headerFooter()
         self.pdf.set_font(style='B', size=self.pdf.headerPt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         line = h * 3
@@ -212,6 +223,22 @@ class TeamMatch(DupBridge):
             y = self.pdf.get_y()
             nLine += 1
 
+    def headerFooter(self):
+        notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
+        footer = f'{self.Rounds} Rounds, swap every {self.boardPerSwitch} boards'
+        self.pdf.set_font(size=self.pdf.tinyPt)
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        w = self.pdf.get_string_width(notice)
+        x = self.pdf.setHCenter(w)
+        self.pdf.set_xy(x, h)
+        self.pdf.cell(text=notice)
+        w = self.pdf.get_string_width(footer)
+        x = self.pdf.setHCenter(w)
+        y = self.pdf.eph - h * 2
+        self.pdf.set_xy(x, y)
+        self.pdf.cell(text=footer)
+
+    # Orchestrator
     def match(self):
         self.Instructions()
         self.Roster()
