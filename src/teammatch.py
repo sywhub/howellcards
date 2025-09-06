@@ -32,6 +32,7 @@ class TeamMatch(DupBridge):
     # Roster is rather simple, just 2 teams of 2 pairs
     def rosterSheet(self):
         ws = self.wb.active
+        ws.title = 'Roster'
         for t in range(2):
             ws.cell(1, 2*t+2).value = f'Team {t+1}'
             ws.cell(1, 2*t+2).font = self.HeaderFont
