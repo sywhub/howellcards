@@ -83,7 +83,7 @@ class TeamMatch(DupBridge):
                 self.pdf.ln()
             self.pdf.ln()
 
-    # Table of boards played
+    # Table of boards played, no PDF equivalent
     def Boards(self):
         self.wb.create_sheet('Boards')
         ws = self.wb['Boards']
@@ -132,13 +132,8 @@ class TeamMatch(DupBridge):
 
     # Paper scoring sheet for each table
     # Excel tabs are not really needed.
-    def ScoreSheet(self):
-        headers = ['Board', 'Contract', 'By', 'Result']
-        pdfWidths = [x * self.pdf.epw / 100 for x in [10, 40, 15, 25]]
-        roundHeight = self.pdf.eph / self.Rounds
+    def scoreSheet(self, headers):
         for t in range(2):
-            self.pdf.add_page()
-            self.headerFooter()
             self.wb.create_sheet(f'Table{t+1} Scores')
             row = 1
             startBoard = 1
@@ -147,10 +142,34 @@ class TeamMatch(DupBridge):
                 row = self.headerRow(ws, [f'Table {t+1}, Round {r}'], row)
                 ws.merge_cells(f'{ws.cell(row-1,1).coordinate}:{ws.cell(row-1,len(headers)+1).coordinate}')
                 row = self.headerRow(ws, headers, row)
+                for board in range(startBoard, self.boardPerSwitch * self.switchPerRound + startBoard):
+                    ws.cell(row, 1).value = board
+                    row += 1
+                startBoard = board + 1
+                row += 1
 
-                # PDF part
-                self.pdf.set_y(self.pdf.margin + (r - 1) * roundHeight)
-                self.pdf.set_font(style='B', size=self.pdf.rosterPt, family=self.pdf.serifFont)
+    def Score(self):
+        headers = {'Board': .1, 'Contract': .4, 'By': .15, 'Result': .25}
+        headers = {k: v * self.pdf.epw for k,v in headers.items()}
+        self.scoreSheet(list(headers.keys()))
+        
+        # How many rounds per page?
+        boardsPerRound = self.switchPerRound * self.boardPerSwitch
+        if boardsPerRound >= 8:
+            roundPerPage = 2
+        elif boardsPerRound <= 4:
+            roundPerPage = 4
+        else:
+            roundPerPage = self.Rounds
+        roundHeight = self.pdf.eph / roundPerPage
+        for t in range(2):
+            startBoard = 1
+            for r in range(1, self.Rounds + 1):
+                if r % roundPerPage == 1:
+                    self.pdf.add_page()
+                    self.headerFooter()
+                self.pdf.set_y(self.pdf.margin + (r % roundPerPage - 1) * roundHeight)
+                self.pdf.set_font(style='B', size=self.pdf.bigPt, family=self.pdf.serifFont)
                 self.pdf.cell(text=f'Table {t+1}, Round {r}')
                 if r > 1:
                     x = self.pdf.get_x()
@@ -158,28 +177,21 @@ class TeamMatch(DupBridge):
                     self.pdf.set_font(style='B', size=self.pdf.linePt, family=self.pdf.serifFont)
                     ydiff -= self.pdf.lineHeight(self.pdf.font_size_pt*1.25)
                     self.pdf.set_xy(x, ydiff)
-                    self.pdf.cell(text='(EW Change Seats)')
+                    self.pdf.cell(text='(EW Change Table)')
                 self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt)*.5)
                 self.pdf.set_font(style='B', size=self.pdf.headerPt, family=self.pdf.sansSerifFont)
                 self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt))
-                i = 0
-                for h in headers:
-                    self.pdf.cell(w=pdfWidths[i], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=h, align='C', border=1)
-                    i += 1
+                for h,pdfW in headers.items():
+                    self.pdf.cell(w=pdfW, h=self.pdf.lineHeight(self.pdf.font_size_pt), text=h, align='C', border=1)
                 self.pdf.ln()
                 self.pdf.set_font(style='', size=self.pdf.linePt)
 
-                # Mix PDF and Excel code
                 self.pdf.set_font(size=self.pdf.linePt, family=self.pdf.sansSerifFont)
                 for board in range(startBoard, self.boardPerSwitch * self.switchPerRound + startBoard):
-                    ws.cell(row, 1).value = board
-                    self.pdf.cell(w=pdfWidths[0], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'{board}', align='C', border=1)
-                    for col in range(1, len(headers)):
-                        self.pdf.cell(w=pdfWidths[col], h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
+                    self.pdf.cell(w=headers['Board'], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'{board}', align='C', border=1)
+                    for col in [v for k,v in headers.items() if k != 'Board']:
+                        self.pdf.cell(w=col, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
                     self.pdf.ln()
-                    row += 1
-                startBoard = board + 1
-                row += 1
 
     # Output into filesystem
     def save(self):
@@ -243,7 +255,7 @@ class TeamMatch(DupBridge):
         self.Instructions()
         self.Roster()
         self.Boards()
-        self.ScoreSheet()
+        self.Score()
         self.IMPTable()
         self.ScoreTable()
         self.save()
@@ -252,11 +264,11 @@ class TeamMatch(DupBridge):
 if __name__ == '__main__':
     log = setlog('team', None)
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--debug', type=str, default='INFO')
-    parser.add_argument('-r', '--round', type=int, default=2)
-    parser.add_argument('-b', '--boards', type=int, default=4)
-    parser.add_argument('-s', '--switch', type=int, default=2)
-    parser.add_argument('-f', '--fake', type=bool, default=False)
+    parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
+    parser.add_argument('-r', '--round', type=int, default=2, help='Number of rounds')
+    parser.add_argument('-b', '--boards', type=int, default=4, help='Number of boards per switch')
+    parser.add_argument('-s', '--switch', type=int, default=2, help='Number of switches per round')
+    parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
         if args.debug.upper() == l[0]:
