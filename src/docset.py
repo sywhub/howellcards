@@ -265,7 +265,9 @@ class HowellDocSet(DupBridge):
 							sh.cell(row, 7).value = f'Table {next[rounds[r][tbl]['EW']]+1} {side.upper()}'
 							pdfData[tbl]['ewNext'] = (next[rounds[r][tbl]['EW']], side)
 				row += 1
+		self.pdf.overview(pdfData)
 		self.pdf.tableOut(pdfData)
+		self.pdf.idTags(pdfData)
 
 	# player-oriented view
 	def saveByPair(self, rounds):

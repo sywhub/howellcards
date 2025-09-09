@@ -59,8 +59,7 @@ class PDF(FPDF):
             return
         footerText = f'Howell Movement for {self.Pairs} Pairs and {self.Tables} Tables'
         self.set_font(size=PDF.tinyPt)
-        self.set_y(self.eph - self.pt2in(self.font_size_pt))
-        self.set_x(self.margin)
+        self.set_xy(self.margin, self.h - self.pt2in(self.font_size_pt)*4)
         self.cell(text=footerText)
 
     # meta information for the tournament
@@ -157,11 +156,8 @@ class PDF(FPDF):
             self.cell(cols[2], h, text=tCol2, align='C', border=1)
             self.cell(cols[3], h, text=tCol3, align='C', border=1)
 
-        self.overview(data)
-        self.idTags(data)
         for t,v in data.items():
             self.add_page()
-            self.footer()
             self.movementSheet()
             self.compass()
             self.moveInstruction(t, v['nsNext'], v['ewNext'])
@@ -407,7 +403,7 @@ class PDF(FPDF):
                 h = self.lineHeight(self.font_size_pt)
                 self.cell(text=f'Board:')
                 self.set_font(size=PDF.tinyPt)
-                txt = f'Table Traveler: {len(boards)} Rounds, {len(boards[0])} Boards'
+                txt = f'Traveler for {len(boards)} Rounds & {len(boards[0])} Boards'
                 self.set_x(self.epw - self.get_string_width(txt)) 
                 self.cell(text=txt, align='R')
                 y += h
