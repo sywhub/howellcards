@@ -96,7 +96,6 @@ class PDF(FPDF):
                Print this before the event.  Cut travelers and ID tags along the dotted line.
                Assign pair number to each pair.  Hand them the ID tag. Encourage them to write their own names on the ID tag. Note the ID tag tell them where to sit.
                Bring writable masking tapes and pens to the  event.
-               Travelers are not compatible to other Howell events. The spreadsheet version is generic.
                Arrange to shuffle and deal all boards.
                Fold and tuck the traveler for each board before the tournament begins.
                Tape the "movement sheets" on the table facing the same direction.
@@ -159,7 +158,7 @@ class PDF(FPDF):
             self.cell(cols[3], h, text=tCol3, align='C', border=1)
 
         self.overview(data)
-        self.firstRound(data)
+        self.idTags(data)
         for t,v in data.items():
             self.add_page()
             self.footer()
@@ -220,7 +219,7 @@ class PDF(FPDF):
             self.set_font(saveFont)
         return
 
-    def firstRound(self, data):
+    def idTags(self, data):
         round1 = []
         writeInSpaces = 20
         for k,v in data.items():
@@ -242,13 +241,11 @@ class PDF(FPDF):
         self.line(x1=cWidth, y1=0, x2=cWidth, y2=self.h)
         self.set_dash_pattern()
         x = self.margin + 0.5
-        topMargin = (cHeight - self.lineHeight(PDF.headerPt) - 2 * self.lineHeight(8)) / 2
         for l,r in enumerate(round1):
-            self.set_font(self.serifFont, size=PDF.headerPt)
-            pairId = f'Pair {r[0]}: ' + ' ' * writeInSpaces
+            self.set_font(self.serifFont, size=PDF.rosterPt)
+            pairId = f'Pair {r[0]}'
             moveInstruction = f'Round 1 go to Table {r[1]+1}, {r[2]}'
-            y = cHeight * l + topMargin
-            y += self.lineHeight(self.font_size_pt)
+            y = cHeight * l + self.lineHeight(self.font_size_pt)
             for xPos in [x, x+cWidth]:
                 self.set_xy(xPos, y)
                 self.cell(w=cWidth, h=self.lineHeight(self.font_size_pt), text=pairId, align='L')
@@ -256,7 +253,8 @@ class PDF(FPDF):
             self.set_font(self.sansSerifFont, size=8)
             for xPos in [x, x+cWidth]:
                 self.set_xy(xPos, y)
-                self.cell(w=cWidth, h=self.lineHeight(self.font_size_pt), text=moveInstruction, align='L')
+                outtxt = f'{moveInstruction}\nSubsequent rounds follow the movement sheet on the table.'
+                self.multi_cell(w=cWidth, h=self.lineHeight(self.font_size_pt), text=outtxt, align='L')
         return
 
     def tableRoundHeaders(self):
@@ -407,10 +405,11 @@ class PDF(FPDF):
                 self.set_xy(xMargin, y)
                 self.set_font(style='B', size=PDF.headerPt)
                 h = self.lineHeight(self.font_size_pt)
-                self.cell(text=f'{len(boards)}-Round & {len(boards[0])}-Table Traveler: Board {bIdx+1}')
-                x = self.get_x() + 0.5
-                self.set_font(style='', size=PDF.notePt)
-                self.cell(w=self.w - x, text=txt, align='R')
+                self.cell(text=f'Board:')
+                self.set_font(size=PDF.tinyPt)
+                txt = f'Table Traveler: {len(boards)} Rounds, {len(boards[0])} Boards'
+                self.set_x(self.epw - self.get_string_width(txt)) 
+                self.cell(text=txt, align='R')
                 y += h
                 self.set_xy(xMargin, y)
                 self.set_font(style='B', size=PDF.linePt)
@@ -421,9 +420,9 @@ class PDF(FPDF):
                 for x in [r for r in l if r[2] != 0]:
                     y += h
                     self.set_xy(xMargin, y)
-                    self.cell(tblCols[0], h, text=f'{x[0]+1}', align='C', border=1)
-                    self.cell(tblCols[1], h, text=f'{x[2]}', align='C', border=1)
-                    self.cell(tblCols[2], h, text=f'{x[3]}', align='C', border=1)
+                    self.cell(tblCols[0], h, text='', align='C', border=1)
+                    self.cell(tblCols[1], h, text='', align='C', border=1)
+                    self.cell(tblCols[2], h, text='', align='C', border=1)
                     self.cell(tblCols[3], h, text='', align='C', border=1)
                     self.cell(tblCols[4], h, text='', align='C', border=1)
                     self.cell(tblCols[5], h, text='', align='C', border=1)
