@@ -150,11 +150,11 @@ class PDF(FPDF):
             self.set_xy(xstart, y)
 
     def tableOut(self, data):
-        def roundBoards(cols, tCol0, tCol2, tCol3, v, i):
+        def roundBoards(cols, tCol0, tCol2, tCol3, v, i, extra=''):
             self.cell(cols[0], h, text=tCol0, align='C', border=1)
             self.cell(cols[1], h, text=f"{v[i][0]['NS']}", align='C', border=1)
             self.cell(cols[2], h, text=tCol2, align='C', border=1)
-            self.cell(cols[3], h, text=tCol3, align='C', border=1)
+            self.cell(cols[3], h, text=f'{tCol3}{extra}', align='C', border=1)
 
         for t,v in data.items():
             self.add_page()
@@ -195,17 +195,17 @@ class PDF(FPDF):
                 # special case of 6 pairs
                 pBoards = [x.strip() for x in v[i][1].split('&')]
                 esRotate = [5, 3, 1]
-                if data[0][0][0]['NS'] != 0:    # 5 pairs
+                if data[0][0][0]['NS'] != 0:    # 6 pairs
                     for bIdx in range(len(pBoards)):
                         b = pBoards[(bIdx+t)%len(pBoards)]
-                        roundBoards(cols, f'{i+1}', f"{v[i][0]['EW']}", b, v, i)
+                        roundBoards(cols, f'{i+1}', f"{v[i][0]['EW']}", b, v, i, ' (Shared)')
                         y += h
                         self.set_xy(x, y)
                 else:
                     for bIdx in range(len(pBoards)):
-                        b = pBoards[(bIdx+t+3)%len(pBoards)]
+                        b = pBoards[(bIdx-t+3)%len(pBoards)]
                         esTable = f'{esRotate[(bIdx+t)%len(esRotate)]}'
-                        roundBoards(cols, f'{i+1}', esTable, b, v, i)    
+                        roundBoards(cols, f'{i+1}', esTable, b, v, i, ' (EW Moves)')    
                         y += h
                         self.set_xy(x, y)
             else:
@@ -223,9 +223,8 @@ class PDF(FPDF):
             round1.append((v[0][0]['EW'], k, 'EW'))
         round1.sort(key=lambda x: x[0])
 
-        tagPerPage = 8
-        nTagsPage = len(round1) if len(round1) <= tagPerPage else tagPerPage
-        nPage = len(round1) // tagPerPage + 1
+        nTagsPage = len(round1) if len(round1) <= 8 else 8
+        nPage = len(round1) // 8 + 1
         cHeight = self.eph / nTagsPage
         cWidth = self.w / 2
         for p in range(nPage):
@@ -240,10 +239,10 @@ class PDF(FPDF):
             self.line(x1=cWidth, y1=0, x2=cWidth, y2=self.h)
             self.set_dash_pattern()
             x = self.margin + 0.5
-            if len(round1) > tagPerPage and p <= 0:
-                enumRound = round1[:tagPerPage]
+            if len(round1) >= nTagsPage and p <= 0:
+                enumRound = round1[:nTagsPage]
             else:
-                enumRound = round1[tagPerPage:]
+                enumRound = round1[nTagsPage:]
             for l,r in enumerate(enumRound):
                 self.set_font(self.serifFont, size=PDF.rosterPt)
                 pairId = f'Pair {r[0]}'
