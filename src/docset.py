@@ -160,11 +160,14 @@ class HowellDocSet(DupBridge):
 		self.wb.save(f'{self.here}/../howell{self.pairs}.xlsx')
 		self.pdf.output(f'{self.here}/../howell{self.pairs}.pdf')
 
+	def boardList(self, bIdx):
+		return [self.decks*bIdx+x+1 for x in range(self.decks)]
+
 	# string to enumerate a "board set" into individual decks
 	def boardSet(self, bIdx):
 		str = ''
-		for i in range(self.decks):
-			str += f'{self.decks*bIdx+i+1}'
+		for i in self.boardList(bIdx):
+			str += f'{i}'
 			if i < self.decks - 1:
 				str += ' & '
 		return str
@@ -214,10 +217,16 @@ class HowellDocSet(DupBridge):
 	# Its value is another dictionary of "ns", "ew", and "board"
 	# which are the pair IDs and the board "set" to be play for that table at that round
 	def saveByRound(self, rounds):
+		vulTbl = ['None', 'NS', 'EW', 'Both']
+		headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS Score', 'EW Score']
 		self.log.debug('Saving by Round')
 		sh = self.wb.create_sheet('By Round')
-		row = self.headerRow(sh, ['Round', 'Table', 'NS', 'EW', 'Board'])
-		sh.column_dimensions['E'].width = 20
+		row = self.headerRow(sh, headers)
+		sh.column_dimensions[chr(headers.index('Contract')+ord('A'))].width = 30
+		sh.column_dimensions['H'].width = 15
+		sh.column_dimensions['I'].width = 15
+		thinLine = Border(top=Side(style='thin', color="000000"))
+		thickLine = Border(top=Side(style='medium', color="F80000"))
 		for rIdx, r in enumerate(rounds):
 			sh.cell(row, 1).value = rIdx+1
 			for tIdx, tbl in enumerate(r):
@@ -227,8 +236,22 @@ class HowellDocSet(DupBridge):
 				else:
 					sh.cell(row, 3).value = tbl['NS']
 				sh.cell(row, 4).value = tbl['EW']
-				sh.cell(row, 5).value = self.boardSet(tbl['Board'])
-				row += 1
+				for b in self.boardList(tbl['Board']):
+					sh.cell(row, 5).value = b
+					sh.cell(row, 6).value = vulTbl[(b-1)%4]
+					sh.cell(row, 6).alignment = self.centerAlign
+					if self.fakeResult:
+						if random.random() < 0.95:
+							pickSide = 10 if random.random() >= 0.5 else 11
+							score = random.randint(2,80)*10
+							sh.cell(row, pickSide).value = score
+						else:
+							sh.cell(row, 10).value = 'A=='
+					row += 1
+				for c in range(2,12):
+					sh.cell(row, c).border = thinLine
+			for c in range(1,12):
+				sh.cell(row, c).border = thickLine
 
 	# Present the same data table-oriented
 	def saveByTable(self, rounds):
@@ -345,6 +368,7 @@ class HowellDocSet(DupBridge):
 
 		# build a datastructure for ease of navigation
 		# just pivotig the source data
+		# board keyed by board set #, value = [(round, table, NS, EW), ...]
 		boards = {}
 		for r,t in enumerate(rounds):
 			for tbl, p in enumerate(t):
@@ -363,13 +387,19 @@ class HowellDocSet(DupBridge):
 				for r in range(len(boards[b])):
 					tbls = boards[b][r]
 					# this part just reference the "mother sheet"
-					sh.cell(row, 2).value = f"='By Round'!A{tbls[0]*nTbl+2}"
-					sh.cell(row, 3).value = f"='By Round'!B{tbls[0]*nTbl+tbls[1]+2}"
-					sh.cell(row, 4).value = f"='By Round'!C{tbls[0]*nTbl+tbls[1]+2}"
-					sh.cell(row, 5).value = f"='By Round'!D{tbls[0]*nTbl+tbls[1]+2}"
+					sh.cell(row, 2).value = f"='By Round'!A{tbls[0]*nTbl*self.decks+2}"
+					sh.cell(row, 3).value = f"='By Round'!B{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
+					sh.cell(row, 4).value = f"='By Round'!C{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
+					sh.cell(row, 5).value = f"='By Round'!D{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
 					sh.cell(row, 6).value = vulTbl[vulIdx]
 					sh.cell(row, 6).alignment = self.centerAlign
+					sh.cell(row, 7).value = f"='By Round'!G{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
+					sh.cell(row, 8).value = f"='By Round'!H{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
+					sh.cell(row, 9).value = f"='By Round'!I{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
+					sh.cell(row, 10).value = f"='By Round'!J{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
+					sh.cell(row, 11).value = f"='By Round'!K{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
 					# Fake raw scores, for debugging
+					'''
 					if self.fakeResult and tbls[2] != 0:
 						if random.random() < 0.95:
 							pickSide = 10 if random.random() >= 0.5 else 11
@@ -378,6 +408,7 @@ class HowellDocSet(DupBridge):
 						else:
 							sh.cell(row, 10).value = 'A=='
 							sh.cell(row, 10).alignment = self.centerAlign
+					'''	
 					# There are steps to calculate IMP for each board
 					# Here are two columns for the end result
 					avgRange = f'{sh.cell(row, 16).coordinate}:{sh.cell(row, 16+nTbl-2).coordinate}'
