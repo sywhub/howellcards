@@ -288,7 +288,7 @@ class PDF(FPDF):
                     y += h
                     self.set_xy(xMargin, y)
                 bIdx += 1
-                y = self.sectionDivider(bIdx, xMargin)
+                y = self.sectionDivider(4, bIdx, xMargin)
         return
 
     # Record sheet for each pair
@@ -302,19 +302,30 @@ class PDF(FPDF):
                         pairs[rData[r][0]['EW']] = []
                     pairs[rData[r][0]['NS']].append((r, rData[r][0]['NS'], rData[r][0]['EW'], rData[r][0]['Board']))
                     pairs[rData[r][0]['EW']].append((r, rData[r][0]['NS'], rData[r][0]['EW'], rData[r][0]['Board']))
-        self.add_page();
-        y = PDF.margin
-        x = PDF.margin
-        self.set_xy(x, y)
-        self.cell(text="Pair Records")
-        y += self.lineHeight(self.font_size_pt)
-        self.set_xy(x, y)
+        tblCols = []
+        xMargin = PDF.margin * 2
+        allW = 0
+        hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result']
+        self.setHeaders(xMargin, hdrs, tblCols, allW)
         for p in sorted(pairs.keys()):
-            str = ""
+            self.add_page()
+            self.footer()
+            y = self.headerRow(xMargin, self.margin, tblCols, hdrs ,f"Pair {p} Play Journal")
+            h = self.lineHeight(self.font_size_pt)
+            y += h
+            self.set_xy(xMargin, y)
             for r in sorted(pairs[p],key=lambda x: x[0]):
                 for b in range(nPerSet):
-                    str += f"Round: {r[0]} NS: {r[1]} EW: {r[2]} Board: {r[3]*nPerSet+b+1}\n"
-            self.multi_cell(w=self.w, h=self.lineHeight(self.font_size_pt), text=str, align='L')
+                    self.cell(tblCols[0], h, text=f'{r[0]+1}', align='C', border=1)
+                    self.cell(tblCols[1], h, text=f'{r[3]*nPerSet+b+1}', align='C', border=1)
+                    self.cell(tblCols[2], h, text=f'{r[1]}', align='C', border=1)
+                    self.cell(tblCols[3], h, text=f'{r[2]}', align='C', border=1)
+                    self.cell(tblCols[4], h, text='', align='C', border=1)
+                    self.cell(tblCols[5], h, text='', align='C', border=1)
+                    self.cell(tblCols[6], h, text='', align='C', border=1)
+                    y += h
+                    self.set_xy(xMargin, y)
+
         return
 
     def tableRoundHeaders(self):
@@ -448,7 +459,7 @@ class PDF(FPDF):
         for i in range(len(hdrs)):
             cols.append(self.get_string_width(hdrs[i]) + 0.2)
         allW = sum(cols)
-        cols[3] += self.epw - allW - leftMargin
+        cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
     def headerRow(self, leftMargin, y, cols, hdrs, title):
         self.set_xy(self.margin, y)
@@ -463,9 +474,9 @@ class PDF(FPDF):
             self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
         return y
 
-    def sectionDivider(self, bIdx, leftMargin):
-        secY = self.eph / 4
-        y = secY * (bIdx % 4) + 0.5
+    def sectionDivider(self, nSection, bIdx, leftMargin):
+        secY = self.eph / nSection
+        y = secY * (bIdx % nSection) + 0.5
         self.set_line_width(PDF.thinLine)
         self.set_dash_pattern(dash=0.1, gap=0.1)
         self.line(x1=leftMargin, y1=y-0.5, x2=self.w - leftMargin, y2=y-0.5)
@@ -473,7 +484,7 @@ class PDF(FPDF):
         return y
 
     # boards : {board #: [(r, tbl, ns, ew), ...]] 
-    def travlers(self, log, nDeck, boards, txt):
+    def travelers(self, log, nDeck, boards):
         tblCols = []
         xMargin = 0.5
         allW = 0
@@ -488,7 +499,7 @@ class PDF(FPDF):
                     self.add_page()
                     self.footer()
                     y = 0.5
-                y = self.headerRow(xMargin, y, tblCols, hdrs, f'Travler for Board: {nDeck*i+d+1}')
+                y = self.headerRow(xMargin, y, tblCols, hdrs, f'Traveler for Board: {nDeck*i+d+1}')
                 h = self.lineHeight(self.font_size_pt)
                 self.set_font(size=PDF.linePt)
                 for x in [r for r in l if r[2] != 0]:
@@ -501,7 +512,7 @@ class PDF(FPDF):
                     self.cell(tblCols[4], h, text='', align='C', border=1)
                     self.cell(tblCols[5], h, text='', align='C', border=1)
                 bIdx += 1
-                y = self.sectionDivider(bIdx, xMargin)
+                y = self.sectionDivider(4, bIdx, xMargin)
 
         return
 

@@ -344,7 +344,7 @@ class HowellDocSet(DupBridge):
 				boards[p['Board']].append((r, tbl, p['NS'], p['EW']))
 
 		list = sorted([x for x in boards.keys()])
-		self.pdf.travlers(self.log, self.decks, boards, self.travelerText)
+		self.pdf.travelers(self.log, self.decks, boards)
 		for b in list:
 			for i in range(self.decks):
 				sh.cell(row, 1).value = b*self.decks+i+1
