@@ -165,10 +165,11 @@ class HowellDocSet(DupBridge):
 
 	# string to enumerate a "board set" into individual decks
 	def boardSet(self, bIdx):
+		bds = self.boardList(bIdx)
 		str = ''
-		for i in self.boardList(bIdx):
+		for i in bds:
 			str += f'{i}'
-			if i < self.decks - 1:
+			if i != bds[-1]:
 				str += ' & '
 		return str
 
@@ -256,25 +257,15 @@ class HowellDocSet(DupBridge):
 	# Present the same data table-oriented
 	def saveByTable(self, rounds):
 		self.log.debug('Saving by Table')
-		sh = self.wb.create_sheet('By Table')
-		row = self.headerRow(sh, ['Table', 'Round', 'NS', 'EW', 'Board', 'NS Next', 'EW Next'])
-		sh.column_dimensions['E'].width = 20
-		sh.column_dimensions['F'].width = 15
-		sh.column_dimensions['G'].width = 15
 		nTbl = len(rounds[0])
 		nRounds = len(rounds)
 		pdfData = {}
 		# iterate by table then by round
 		for tbl in range(nTbl):
-			sh.cell(row, 1).value = tbl + 1
 			pdfData[tbl] = {'nRound': nRounds}
 			for r in range(nRounds):
 				# Simply referene the "By Round" sheet
 				pdfData[tbl][r] = (rounds[r][tbl], self.boardSet(rounds[r][tbl]['Board']))
-				sh.cell(row, 2).value = f"='By Round'!A{r*nTbl+2}"
-				sh.cell(row, 3).value = f"='By Round'!C{r*nTbl+tbl+2}"
-				sh.cell(row, 4).value = f"='By Round'!D{r*nTbl+tbl+2}"
-				sh.cell(row, 5).value = f"='By Round'!E{r*nTbl+tbl+2}"
 				# The movement, which table/seat for the next round
 				if r != nRounds - 1:
 					for side in ['NS', 'EW']:
@@ -282,38 +273,14 @@ class HowellDocSet(DupBridge):
 						next = {v[side]: k for k,v in enumerate(rounds[r+1])}
 						# look up the pair im that side's lookup
 						if rounds[r][tbl]['NS'] in next.keys():
-							sh.cell(row, 6).value = f'Table {next[rounds[r][tbl]['NS']]+1} {side.upper()}'
 							pdfData[tbl]['nsNext'] = (next[rounds[r][tbl]['NS']], side)
 						if rounds[r][tbl]['EW'] in next.keys():
-							sh.cell(row, 7).value = f'Table {next[rounds[r][tbl]['EW']]+1} {side.upper()}'
 							pdfData[tbl]['ewNext'] = (next[rounds[r][tbl]['EW']], side)
-				row += 1
 		self.pdf.overview(pdfData)
 		self.pdf.tableOut(pdfData)
 		self.pdf.idTags(pdfData)
-
-	# player-oriented view
-	def saveByPair(self, rounds):
-		self.log.debug('Saving by Pair')
-		sh = self.wb.create_sheet('By Pair')
-		sh.column_dimensions['F'].width = 20
-		headers = ['Pair', 'Round', 'Table', 'Seats', 'Against', 'Board']
-		row = self.headerRow(sh, headers)
-		for p in range(1, self.pairs+1):
-			sh.cell(row, 1).value = p
-			for r in range(len(rounds)):
-				nTbl = len(rounds[r])
-				for t,tbl in enumerate(rounds[r]):
-					if tbl['NS'] == p or tbl['EW'] == p:
-						seat = 'NS' if tbl['NS'] == p else 'EW'
-						sh.cell(row, 2).value = f"='By Round'!A{r*nTbl+2}"
-						sh.cell(row, 3).value = f"='By Round'!B{r*nTbl+t+2}"
-						sh.cell(row, 4).value = seat.upper()
-						sh.cell(row, 5).value = f"='By Round'!{'C' if seat == 'EW' else 'D'}{r*nTbl+t+2}"
-						sh.cell(row, 6).value = f"='By Round'!E{r*nTbl+t+2}"
-						for i in range(2,7):
-							sh.cell(row, i).alignment = self.centerAlign
-						row += 1
+		self.pdf.pickupSlips(pdfData, self.decks)
+		self.pdf.pairRecords(pdfData, self.decks)
 
 	# Board-oriented view
 	# A "board" is really a set of decks in the code.  The number of decks is in
@@ -398,17 +365,7 @@ class HowellDocSet(DupBridge):
 					sh.cell(row, 9).value = f"='By Round'!I{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
 					sh.cell(row, 10).value = f"='By Round'!J{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
 					sh.cell(row, 11).value = f"='By Round'!K{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
-					# Fake raw scores, for debugging
-					'''
-					if self.fakeResult and tbls[2] != 0:
-						if random.random() < 0.95:
-							pickSide = 10 if random.random() >= 0.5 else 11
-							score = random.randint(2,80)*10
-							sh.cell(row, pickSide).value = score
-						else:
-							sh.cell(row, 10).value = 'A=='
-							sh.cell(row, 10).alignment = self.centerAlign
-					'''	
+
 					# There are steps to calculate IMP for each board
 					# Here are two columns for the end result
 					avgRange = f'{sh.cell(row, 16).coordinate}:{sh.cell(row, 16+nTbl-2).coordinate}'

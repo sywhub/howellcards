@@ -24,7 +24,6 @@ def howellFromJson(log, pairs, fake, jsonfile):
         doc.init(pairs, tourney['Rounds'])
         doc.saveByRound(tourney['Arrangement'])
         doc.saveByTable(tourney['Arrangement'])
-        doc.saveByPair(tourney['Arrangement'])
         doc.saveByBoard(tourney['Arrangement'])
         doc.save()
 
