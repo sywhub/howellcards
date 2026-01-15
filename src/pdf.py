@@ -54,6 +54,7 @@ class PDF(FPDF):
         self.cell(text=txt)
         return
 
+    # Footer at each page to help sorting papers
     def footer(self):
         if not hasattr(self, 'Pairs') or not hasattr(self, 'Tables'):
             return
@@ -91,29 +92,33 @@ class PDF(FPDF):
     # part of the meta pagee 
     # Some text for the TD/Organizer
     def instructions(self, log):
-        txt = '''There is a matching spreadsheet for this PDF.
-               Print this before the event.  Cut travelers and ID tags along the dotted line.
-               Assign pair number to each pair.  Hand them the ID tag. Encourage them to write their own names on the ID tag. Note the ID tag tell them where to sit.
-               Bring writable masking tapes and pens to the  event.
-               Arrange to shuffle and deal all boards.
-               Fold and tuck the traveler for each board before the tournament begins.
-               Tape the "movement sheets" on the table facing the same direction.
-               Generally, people mvoe "down" the table and boards move "up."  Having relay tables strategically place helps board movements.
-               Announce the direction of north to all participants.
-               Generally, North keeps score.  South caddies the boards.
-               Collect travelers when the tournment ends.  Record and results on the spreadsheet.  The tournament result should be at the Roster tag.'''
-        # wherever we are
-        y = self.get_y()+1
+        with open("instructions.txt", "r") as f:
+            txt = f.read()
+            txt = txt.replace('\n',' ')
+            txt = txt[1:]
         self.set_font(size=PDF.linePt)
         h = self.lineHeight(self.font_size_pt)
+        y = self.get_y()+2*h
         nLine = 1
-        for t in txt.split('\n'):
+        lineBreak = txt.find('#')
+        while lineBreak > 0:
+            t = txt[:lineBreak]
+            # wish for a lambda with closure
             self.set_xy(1, y)
             self.cell(h, h, f'{nLine}.', align='R')
             self.set_xy(1+h, y)
             self.multi_cell(self.epw-2, h=h, text=t.strip())
             y = self.get_y()
             nLine += 1
+            txt = txt[lineBreak+1:]
+            lineBreak = txt.find('#')
+        if len(txt) > 0:
+            t = txt
+            self.set_xy(1, y)
+            self.cell(h, h, f'{nLine}.', align='R')
+            self.set_xy(1+h, y)
+            self.multi_cell(self.epw-2, h=h, text=t.strip())
+            y = self.get_y()
 
     # Sign-up sheet
     def roster(self, log, rows, headers):
