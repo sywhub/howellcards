@@ -16,49 +16,68 @@ class TeamMatch(DupBridge):
         super().__init__(log)
         self.pdf = pdf.PDF()
         self.wb = Workbook()
-        self.boardPerSwitch = 4
-        self.switchPerRound = 2
+        self.boards = 4
+        self.switches = 0
         self.Rounds = 2
         self.vulTbl = ['None', 'NS', 'EW', 'Both']
         self.Fake = True
 
     # record metadata
     def setup(self, rounds, boards, switch, fake):
-        self.boardPerSwitch = boards
-        self.switchPerRound = switch
-        self.Rounds = rounds
+        self.boards = boards
+        self.switches = switch
+        self.rounds = rounds
         self.Fake = fake
+        self.TeamPairs = {1: [1, 2, 3, 4], 2: [1, 3, 2, 4], 3: [1, 4, 2, 3]}
 
-    # Roster is rather simple, just 2 teams of 2 pairs
+    # Roster changes with each "switch"
     def rosterSheet(self):
         ws = self.wb.active
         ws.title = 'Roster'
-        for t in range(2):
-            ws.cell(1, 2*t+2).value = f'Team {t+1}'
-            ws.cell(1, 2*t+2).font = self.HeaderFont
-            ws.cell(1, 2*t+2).alignment = self.centerAlign
-            ws.merge_cells(f'{ws.cell(1,2*t+2).coordinate}:{ws.cell(1,2*t+3).coordinate}')
-        row = 2
-        for pair in range(2):
-            ws.cell(row, 1).value = f'Pair {pair+1}'
+        row = 1
+        ws.cell(row, 1).value = 'Players'
+        ws.cell(row, 1).font = self.HeaderFont
+        ws.cell(row, 1).alignment = self.centerAlign
+        ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
+        row += 1
+        for pair in range(4):
             ws.cell(row, 1).font = self.HeaderFont
-            for p in range(2):
-                ws.cell(row,2*p+2).value = self.placeHolderName()
-                ws.cell(row,2*p+3).value = self.placeHolderName()
+            ws.cell(row, 1).value = f'Pair {pair+1}'
+            ws.cell(row, 2).value = self.placeHolderName()
+            ws.cell(row, 3).value = self.placeHolderName()
             row += 1
-        # Excel Formula for IMP scores
-        ws.cell(row, 1).value = 'Total IMP'
-        ws.cell(row, 3).value = f'=SUM(Boards!I3:I{self.boardPerSwitch*self.switchPerRound*self.Rounds*2+2})'
-        ws.cell(row, 5).value = f'=SUM(Boards!J3:J{self.boardPerSwitch*self.switchPerRound*self.Rounds*2+2})'
-        bd = Side(style='double', color='000000')
-        for i in [1,3,5]:
-            if i != 1:
-                ws.cell(row, i).border = Border(top=bd)
-            ws.cell(row, i).font = self.HeaderFont
-            ws.cell(row, i).alignment = self.centerAlign
+        row += 1
+
+        rotation = 1
+        while self.switches >= rotation:
+            ws.cell(row, 1).font = self.HeaderFont
+            ws.cell(row, 1).alignment = self.centerAlign
+            ws.cell(row, 1).value = f'Rotation #{rotation}'
+            ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,6).coordinate}')
+            row += 1
+
+            for t in range(2):
+                ws.cell(row, 2*t+1).value = f'Team {t+(rotation-1)*2+1}'
+                ws.cell(row, 2*t+1).font = self.HeaderFont
+                ws.cell(row, 2*t+1).alignment = self.centerAlign
+                ws.merge_cells(f'{ws.cell(row,2*t+1).coordinate}:{ws.cell(row,2*t+2).coordinate}')
+            ws.cell(row, 5).font = self.HeaderFont
+            ws.cell(row, 5).alignment = self.centerAlign
+            ws.cell(row, 5).value = 'IMP'
+            ws.merge_cells(f'{ws.cell(row,5).coordinate}:{ws.cell(row,6).coordinate}')
+            row += 1
+            rotIdx = rotation % 3
+            if rotIdx == 0:
+                rotIdx = 3
+            for i in range(4):
+                ws.cell(row, i+1).value = f'Pair {self.TeamPairs[rotIdx][i]}'
+            #ws.cell(row, 5).value = f'=SUM(Boards!I3:I{self.switches*self.switches*self.rounds*2+2})'
+            rotation += 1
+            row += 1
 
     def Roster(self):
         self.rosterSheet()
+        return
 
         # convert percents into inches
         headers = {'Team': self.pdf.epw * 0.05, 'Pairs': self.pdf.epw * 0.1, 'Name': self.pdf.epw * 0.7}
@@ -101,7 +120,7 @@ class TeamMatch(DupBridge):
         col = 1
         headers = ['Board', 'Vul', 'Table', 'Contract', 'By', 'Result', 'NS', 'EW', 'NS', 'EW']
         row = self.headerRow(ws, headers, 2)
-        for board in range(1, self.boardPerSwitch * self.Rounds * self.switchPerRound + 1):
+        for board in range(1, self.boards * self.rounds * self.switches + 1):
             col = 1
             ws.cell(row, col).value = board
             vulIdx = (board - 1) % 4 + (board - 1) // 4
@@ -114,7 +133,7 @@ class TeamMatch(DupBridge):
             EWscore = f"IF(H{row+1}>0,H{row}-H{row+1},H{row}+G{row+1})"
             ws.cell(row, col+8).value = f"=IF(G{row}>0,VLOOKUP(ABS({NSscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({NSscore}),-J{row})"
             ws.cell(row, col+9).value = f"=IF(H{row}>0,VLOOKUP(ABS({EWscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({EWscore}),-I{row})"
-            bd = Side(style='thin', color='dd0000')
+            bd = Side(style='thin', color='000000')
             row += 1
             for i in range(1,len(headers)+1):
                 ws.cell(row, i).border = Border(bottom=bd)
@@ -155,13 +174,13 @@ class TeamMatch(DupBridge):
         self.scoreSheet(list(headers.keys()))
         
         # How many rounds per page?
-        boardsPerRound = self.switchPerRound * self.boardPerSwitch
+        boardsPerRound = self.switches * self.boards
         if boardsPerRound >= 8:
             roundPerPage = 2
         elif boardsPerRound <= 4:
             roundPerPage = 4
         else:
-            roundPerPage = self.Rounds
+            roundPerPage = self.rounds
         roundHeight = self.pdf.eph / roundPerPage
         for t in range(2):
             startBoard = 1
@@ -198,9 +217,9 @@ class TeamMatch(DupBridge):
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../teammatch{self.Rounds}x{self.boardPerSwitch*self.switchPerRound}'
+        fn = f'{here}/../teammatch{self.Rounds}x{self.boards}x{self.switches}'
         self.wb.save(f'{fn}.xlsx')
-        self.pdf.output(f'{fn}.pdf')
+        #self.pdf.output(f'{fn}.pdf')
 
     # Some text for the TD/Organizer
     def Instructions(self):
@@ -238,7 +257,7 @@ class TeamMatch(DupBridge):
 
     def headerFooter(self):
         notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
-        footer = f'{self.Rounds} Rounds, swap every {self.boardPerSwitch} boards'
+        footer = f'{self.Rounds} Rounds, swap every {self.boards} boards'
         self.pdf.set_font(size=self.pdf.tinyPt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         w = self.pdf.get_string_width(notice)
@@ -253,10 +272,10 @@ class TeamMatch(DupBridge):
 
     # Orchestrator
     def match(self):
-        self.Instructions()
+        # self.Instructions()
         self.Roster()
         self.Boards()
-        self.Score()
+        #self.Score()
         self.IMPTable()
         self.ScoreTable()
         self.save()
@@ -267,8 +286,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
     parser.add_argument('-r', '--round', type=int, default=2, help='Number of rounds')
-    parser.add_argument('-b', '--boards', type=int, default=4, help='Number of boards per switch')
-    parser.add_argument('-s', '--switch', type=int, default=2, help='Number of switches per round')
+    parser.add_argument('-b', '--boards', type=int, default=4, help='Number of boards per round')
+    parser.add_argument('-s', '--switch', type=int, default=1, help='Number of switches')
     parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
