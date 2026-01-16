@@ -37,6 +37,12 @@ class DupBridge:
 			sh.cell(row, col+1).value = headers[col]
 			sh.cell(row, col+1).font = self.HeaderFont
 			sh.cell(row, col+1).alignment = self.centerAlign
+		try:
+			contractCol = headers.index('Contract')
+			sh.column_dimensions[chr(ord('A')+contractCol)].width = 30;
+		except ValueError:
+			pass
+
 		return row + 1
 
 	# A sheet for easy scoring

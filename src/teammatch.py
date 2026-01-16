@@ -18,7 +18,7 @@ class TeamMatch(DupBridge):
         self.wb = Workbook()
         self.boards = 4
         self.switches = 0
-        self.Rounds = 2
+        self.rounds = 2
         self.vulTbl = ['None', 'NS', 'EW', 'Both']
         self.Fake = True
 
@@ -48,16 +48,16 @@ class TeamMatch(DupBridge):
             row += 1
         row += 1
 
-        rotation = 1
-        while self.switches >= rotation:
+        switchIdx = 1
+        while self.switches >= switchIdx:
             ws.cell(row, 1).font = self.HeaderFont
             ws.cell(row, 1).alignment = self.centerAlign
-            ws.cell(row, 1).value = f'Rotation #{rotation}'
+            ws.cell(row, 1).value = f'Rotation #{switchIdx}'
             ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,6).coordinate}')
             row += 1
 
             for t in range(2):
-                ws.cell(row, 2*t+1).value = f'Team {t+(rotation-1)*2+1}'
+                ws.cell(row, 2*t+1).value = f'Team {t+(switchIdx-1)*2+1}'
                 ws.cell(row, 2*t+1).font = self.HeaderFont
                 ws.cell(row, 2*t+1).alignment = self.centerAlign
                 ws.merge_cells(f'{ws.cell(row,2*t+1).coordinate}:{ws.cell(row,2*t+2).coordinate}')
@@ -66,13 +66,13 @@ class TeamMatch(DupBridge):
             ws.cell(row, 5).value = 'IMP'
             ws.merge_cells(f'{ws.cell(row,5).coordinate}:{ws.cell(row,6).coordinate}')
             row += 1
-            rotIdx = rotation % 3
-            if rotIdx == 0:
-                rotIdx = 3
+            idx = switchIdx % 3
+            if idx == 0:
+                idx = 3
             for i in range(4):
-                ws.cell(row, i+1).value = f'Pair {self.TeamPairs[rotIdx][i]}'
+                ws.cell(row, i+1).value = f'Pair {self.TeamPairs[idx][i]}'
             #ws.cell(row, 5).value = f'=SUM(Boards!I3:I{self.switches*self.switches*self.rounds*2+2})'
-            rotation += 1
+            switchIdx += 1
             row += 1
 
     def Roster(self):
@@ -107,8 +107,10 @@ class TeamMatch(DupBridge):
     def Boards(self):
         self.wb.create_sheet('Boards')
         ws = self.wb['Boards']
-        col = 7
         # merged columns
+        headers = ['Board', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', 'NS', 'EW']
+        NSColScoreCol = headers.index('NS', 4) + 1
+        col = NSColScoreCol
         for h in ['Score', 'IMP']:
             ws.cell(1, col).value = h
             ws.cell(1, col).font = self.HeaderFont
@@ -118,26 +120,38 @@ class TeamMatch(DupBridge):
 
         # next row is the headers
         col = 1
-        headers = ['Board', 'Vul', 'Table', 'Contract', 'By', 'Result', 'NS', 'EW', 'NS', 'EW']
         row = self.headerRow(ws, headers, 2)
-        for board in range(1, self.boards * self.rounds * self.switches + 1):
+        for board in range(self.boards * self.rounds * self.switches):
             col = 1
-            ws.cell(row, col).value = board
-            vulIdx = (board - 1) % 4 + (board - 1) // 4
-            vulIdx %= 4
-            ws.cell(row, col+1).value = f'{self.vulTbl[vulIdx]}'
-            ws.cell(row, col+2).value = 1
-            ws.cell(row+1, col+2).value = 2
-            self.fakeCOntracts(ws, row)
-            NSscore = f"IF(G{row+1}>0,G{row}-G{row+1},G{row}+H{row+1})"
-            EWscore = f"IF(H{row+1}>0,H{row}-H{row+1},H{row}+G{row+1})"
-            ws.cell(row, col+8).value = f"=IF(G{row}>0,VLOOKUP(ABS({NSscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({NSscore}),-J{row})"
-            ws.cell(row, col+9).value = f"=IF(H{row}>0,VLOOKUP(ABS({EWscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({EWscore}),-I{row})"
+            ws.cell(row, col).value = board+1
+            vulIdx = board % 4
+            ws.cell(row, col+headers.index('Vul')).value = f'{self.vulTbl[vulIdx]}'
+            ws.cell(row, col+headers.index('Vul')).alignment = self.centerAlign
+            ws.cell(row+1, col+headers.index('Vul')).value = f'{self.vulTbl[vulIdx]}'
+            ws.cell(row+1, col+headers.index('Vul')).alignment = self.centerAlign
+            ws.cell(row, col+headers.index('Table')).value = 1
+            ws.cell(row+1, col+headers.index('Table')).value = 2
+            switchIdx = board // (self.rounds * self.boards) + 1
+            swap = (board % (self.rounds * self.boards)) // self.boards
+            pairCol = headers.index('NS')+1
+            ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[switchIdx][0]}'
+            ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][2 + swap]}'
+            ws.cell(row+1, pairCol).value = f'Pair {self.TeamPairs[switchIdx][3 - swap]}'
+            ws.cell(row+1, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][1]}'
+            #self.fakeCOntracts(ws, row)
+            NSCol = chr(ord('A')+NSColScoreCol)
+            EWCol = chr(ord(NSCol)+1)
+            for t in range(2):
+                NSscore = f"IF({NSCol}{row+1}>0,{NSCol}{row}-{NSCol}{row+1},{NSCol}{row}+{EWCol}{row+1})"
+                EWscore = f"IF({EWCol}{row+1}>0,{EWCol}{row}-{EWCol}{row+1},{EWCol}{row}+{NSCol}{row+1})"
+                #ws.cell(f'{NSCol}{row}').value = NSscore;
+                #ws.cell(f'{EWCol}{row}').value = EWscore;
+                ws.cell(row, col+headers.index('NS', NSColScoreCol+1)).value = f"=IF({NSCol}{row}>0,VLOOKUP(ABS({NSscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({NSscore}),-J{row})"
+                ws.cell(row, col+headers.index('EW', NSColScoreCol+1)).value = f"=IF({EWCol}{row}>0,VLOOKUP(ABS({EWscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({EWscore}),-I{row})"
+                row += 1
             bd = Side(style='thin', color='000000')
-            row += 1
             for i in range(1,len(headers)+1):
-                ws.cell(row, i).border = Border(bottom=bd)
-            row += 1
+                ws.cell(row-1, i).border = Border(bottom=bd)
 
     # Fake a score to test IMP calculation
     def fakeCOntracts(self, ws, row):
@@ -217,7 +231,7 @@ class TeamMatch(DupBridge):
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../teammatch{self.Rounds}x{self.boards}x{self.switches}'
+        fn = f'{here}/../teammatch{self.rounds}x{self.boards}x{self.switches}'
         self.wb.save(f'{fn}.xlsx')
         #self.pdf.output(f'{fn}.pdf')
 
