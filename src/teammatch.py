@@ -108,10 +108,15 @@ class TeamMatch(DupBridge):
         self.wb.create_sheet('Boards')
         ws = self.wb['Boards']
         # merged columns
-        headers = ['Board', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', 'NS', 'EW']
-        NSColScoreCol = headers.index('NS', 4) + 1
-        col = NSColScoreCol
-        for h in ['Score', 'IMP']:
+        headers = ['Board', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result',
+                   'NS', 'EW',  # raw score from play
+                   'NS', 'EW',  # IMP columns
+                   'NS', 'EW',  # Diffs
+                   'NS', 'EW',  # Net scores
+                   ]
+        scoreCol = headers.index('NS', 4)   # raw scores, zero based
+        col = scoreCol + 1
+        for h in ['Score', 'IMP', 'Diff', 'Net Score']:
             ws.cell(1, col).value = h
             ws.cell(1, col).font = self.HeaderFont
             ws.cell(1, col).alignment = self.centerAlign
@@ -119,50 +124,66 @@ class TeamMatch(DupBridge):
             col += 2
 
         # next row is the headers
-        col = 1
         row = self.headerRow(ws, headers, 2)
+        pairCol = headers.index('NS')+1
         for board in range(self.boards * self.rounds * self.switches):
             col = 1
             ws.cell(row, col).value = board+1
-            vulIdx = board % 4
-            ws.cell(row, col+headers.index('Vul')).value = f'{self.vulTbl[vulIdx]}'
-            ws.cell(row, col+headers.index('Vul')).alignment = self.centerAlign
-            ws.cell(row+1, col+headers.index('Vul')).value = f'{self.vulTbl[vulIdx]}'
-            ws.cell(row+1, col+headers.index('Vul')).alignment = self.centerAlign
-            ws.cell(row, col+headers.index('Table')).value = 1
-            ws.cell(row+1, col+headers.index('Table')).value = 2
+            vulIdx = (board + board // 4) % 4
             switchIdx = board // (self.rounds * self.boards) + 1
+            # change opponents for each table
             swap = (board % (self.rounds * self.boards)) // self.boards
-            pairCol = headers.index('NS')+1
-            ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[switchIdx][0]}'
-            ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][2 + swap]}'
-            ws.cell(row+1, pairCol).value = f'Pair {self.TeamPairs[switchIdx][3 - swap]}'
-            ws.cell(row+1, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][1]}'
-            #self.fakeCOntracts(ws, row)
-            NSCol = chr(ord('A')+NSColScoreCol)
-            EWCol = chr(ord(NSCol)+1)
-            for t in range(2):
-                NSscore = f"IF({NSCol}{row+1}>0,{NSCol}{row}-{NSCol}{row+1},{NSCol}{row}+{EWCol}{row+1})"
-                EWscore = f"IF({EWCol}{row+1}>0,{EWCol}{row}-{EWCol}{row+1},{EWCol}{row}+{NSCol}{row+1})"
-                #ws.cell(f'{NSCol}{row}').value = NSscore;
-                #ws.cell(f'{EWCol}{row}').value = EWscore;
-                ws.cell(row, col+headers.index('NS', NSColScoreCol+1)).value = f"=IF({NSCol}{row}>0,VLOOKUP(ABS({NSscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({NSscore}),-J{row})"
-                ws.cell(row, col+headers.index('EW', NSColScoreCol+1)).value = f"=IF({EWCol}{row}>0,VLOOKUP(ABS({EWscore}),'IMP Table'!$A$2:$C$26,3)*SIGN({EWscore}),-I{row})"
+            for t in range(2):  # 2 tables
+                if self.Fake:
+                    self.fakeContracts(ws, row)
+                ws.cell(row, col+headers.index('Vul')).value = f'{self.vulTbl[vulIdx]}'
+                ws.cell(row, col+headers.index('Vul')).alignment = self.centerAlign
+                ws.cell(row, col+headers.index('Table')).value = t+1
+
+                # IMP Columns
+                lookCell = self.rc2a1(row, scoreCol+5)
+                lookUp =f"=IF(ISNUMBER({lookCell}),VLOOKUP(ABS({lookCell}),'IMP Table'!$A$2:$C$26,3)*SIGN({lookCell}),\"\")"
+                ws.cell(row, scoreCol+3).value = lookUp
+                lookCell = self.rc2a1(row, scoreCol+6)
+                lookUp =f"=IF(ISNUMBER({lookCell}),VLOOKUP(ABS({lookCell}),'IMP Table'!$A$2:$C$26,3)*SIGN({lookCell}),\"\")"
+                ws.cell(row, scoreCol+4).value = lookUp
+
+                # Set which pair against which
+                # Compute the differences of the net scores
+                if t == 0:
+                    ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[switchIdx][0]}'
+                    ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][2 + swap]}'
+                    checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+7)}),ISNUMBER({self.rc2a1(row+1, scoreCol+7)})),'
+                    ws.cell(row, scoreCol+5).value = f'{checkNum}{self.rc2a1(row, scoreCol+7)}-{self.rc2a1(row+1, scoreCol+7)},"")'
+                    checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+8)}),ISNUMBER({self.rc2a1(row+1, scoreCol+8)})),'
+                    ws.cell(row, scoreCol+6).value = f'{checkNum}{self.rc2a1(row, scoreCol+8)}-{self.rc2a1(row+1, scoreCol+8)},"")'
+                else:
+                    ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[switchIdx][3 - swap]}'
+                    ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][1]}'
+                    checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+7)}),ISNUMBER({self.rc2a1(row-1, scoreCol+7)})),'
+                    ws.cell(row, scoreCol+5).value = f'{checkNum}{self.rc2a1(row, scoreCol+7)}-{self.rc2a1(row-1, scoreCol+7)},"")'
+                    checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+8)}),ISNUMBER({self.rc2a1(row-1, scoreCol+8)})),'
+                    ws.cell(row, scoreCol+6).value = f'{checkNum}{self.rc2a1(row, scoreCol+8)}-{self.rc2a1(row-1, scoreCol+8)},"")'
+                # setup net scores
+                NSraw=self.rc2a1(row, scoreCol+1)
+                EWraw=self.rc2a1(row, scoreCol+2)
+                ws.cell(row, scoreCol+7).value = f'=IF(ISNUMBER({NSraw}),{NSraw},IF(ISNUMBER({EWraw}),-{EWraw},""))'
+                ws.cell(row, scoreCol+8).value = f'=IF(ISNUMBER({EWraw}),{EWraw},IF(ISNUMBER({NSraw}),-{NSraw},""))'
                 row += 1
             bd = Side(style='thin', color='000000')
             for i in range(1,len(headers)+1):
                 ws.cell(row-1, i).border = Border(bottom=bd)
+        bd = Side(style='thin', color='f08000')
+        for board in range(self.boards * self.rounds * self.switches*2+2):
+            bexist = ws.cell(board+1, 13).border 
+            ws.cell(board+1, 13).border = Border(left=bd, bottom=bexist.bottom)
+        
 
     # Fake a score to test IMP calculation
-    def fakeCOntracts(self, ws, row):
+    def fakeContracts(self, ws, row):
         import random
-        if self.Fake:
-            col = random.choice([7,8])
-            ws.cell(row, col).value = random.randint(5,12)*100
-            col = random.choice([7,8])
-            ws.cell(row+1, col).value = random.randint(5,12)*100
-        else:
-            ws.cell(row, 7).value = 10
+        col = random.choice([9,10])
+        ws.cell(row, col).value = random.randint(5,12)*100
 
     # Paper scoring sheet for each table
     # Excel tabs are not really needed.
@@ -233,7 +254,9 @@ class TeamMatch(DupBridge):
         here = os.path.dirname(os.path.abspath(__file__))
         fn = f'{here}/../teammatch{self.rounds}x{self.boards}x{self.switches}'
         self.wb.save(f'{fn}.xlsx')
+        print(f'Saved {fn}.{{xlsx,pdf}}')
         #self.pdf.output(f'{fn}.pdf')
+        #print(f'Saved {fn}')
 
     # Some text for the TD/Organizer
     def Instructions(self):
@@ -283,6 +306,9 @@ class TeamMatch(DupBridge):
         y = self.pdf.eph - h * 2
         self.pdf.set_xy(x, y)
         self.pdf.cell(text=footer)
+
+    def rc2a1(self, r, c):
+        return f"{chr(c-1+ord('A'))}{r}"
 
     # Orchestrator
     def match(self):
