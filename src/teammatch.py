@@ -71,7 +71,15 @@ class TeamMatch(DupBridge):
                 idx = 3
             for i in range(4):
                 ws.cell(row, i+1).value = f'Pair {self.TeamPairs[idx][i]}'
-            #ws.cell(row, 5).value = f'=SUM(Boards!I3:I{self.switches*self.switches*self.rounds*2+2})'
+            nRows = self.rounds * self.boards * 2
+            rStart = 3 + (switchIdx - 1) * nRows
+            rEnd = rStart + nRows - 1
+            formula = f'=SUMIF(Boards!C{rStart}:C{rEnd},{self.rc2a1(row,1)},Boards!K{rStart}:K{rEnd})'
+            formula +=f'+SUMIF(Boards!C{rStart}:C{rEnd},{self.rc2a1(row,2)},Boards!K{rStart}:K{rEnd})'
+            ws.cell(row, 5).value = formula
+            formula = f'=SUMIF(Boards!D{rStart}:D{rEnd},{self.rc2a1(row,3)},Boards!L{rStart}:L{rEnd})'
+            formula +=f'+SUMIF(Boards!D{rStart}:D{rEnd},{self.rc2a1(row,4)},Boards!L{rStart}:L{rEnd})'
+            ws.cell(row, 6).value = formula
             switchIdx += 1
             row += 1
 
@@ -173,6 +181,7 @@ class TeamMatch(DupBridge):
             bd = Side(style='thin', color='000000')
             for i in range(1,len(headers)+1):
                 ws.cell(row-1, i).border = Border(bottom=bd)
+        # hint that this section is not to touch
         bd = Side(style='thin', color='f08000')
         for board in range(self.boards * self.rounds * self.switches*2+2):
             bexist = ws.cell(board+1, 13).border 
