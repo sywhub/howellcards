@@ -361,16 +361,12 @@ class HowellDocSet(DupBridge):
 					tbls = boards[b][r]
 					# this part just reference the "mother sheet"
 					sh.cell(row, 2).value = f"='By Round'!A{tbls[0]*nTbl*self.decks+2}"
-					sh.cell(row, 3).value = f"='By Round'!B{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
-					sh.cell(row, 4).value = f"='By Round'!C{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
-					sh.cell(row, 5).value = f"='By Round'!D{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
+					for c in range(ord('B'),ord('K')+1):
+						cVal = f"'By Round'!{chr(c if c < ord('F') else c + 1)}{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
+						bcheck = f'ISBLANK({cVal},"",{cVal})'
+						sh.cell(row, 3+c-ord('B')).value = f"={cVal}"
 					sh.cell(row, 6).value = vulTbl[vulIdx]
 					sh.cell(row, 6).alignment = self.centerAlign
-					sh.cell(row, 7).value = f"='By Round'!G{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
-					sh.cell(row, 8).value = f"='By Round'!H{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
-					sh.cell(row, 9).value = f"='By Round'!I{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
-					sh.cell(row, 10).value = f"='By Round'!J{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
-					sh.cell(row, 11).value = f"='By Round'!K{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2+i}"
 
 					# There are steps to calculate IMP for each board
 					# Here are two columns for the end result
