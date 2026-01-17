@@ -39,6 +39,9 @@ class TeamMatch(DupBridge):
         ws.cell(row, 1).font = self.HeaderFont
         ws.cell(row, 1).alignment = self.centerAlign
         ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
+        ws.cell(row, 4).value = 'IMP'
+        ws.cell(row, 4).font = self.HeaderFont
+        ws.cell(row, 4).alignment = self.centerAlign
         row += 1
         for pair in range(4):
             ws.cell(row, 1).font = self.HeaderFont
@@ -47,6 +50,15 @@ class TeamMatch(DupBridge):
             ws.cell(row, 3).value = self.placeHolderName()
             row += 1
         row += 1
+        for pair in range(4):
+            sumImp = "=+"
+            for s in range(self.switches):
+                seat = self.TeamPairs[s+1].index(pair+1) // 2
+                if s > 0 and s < self.switches:
+                    sumImp += '+'
+                sumImp += self.rc2a1(9+s*3, 5+seat)
+            ws.cell(2+pair, 4).value = sumImp
+
 
         switchIdx = 1
         while self.switches >= switchIdx:
