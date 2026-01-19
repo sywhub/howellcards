@@ -268,7 +268,7 @@ class PDF(FPDF):
         tblCols = []
         xMargin = 0.5
         allW = 0
-        hdrs = ['Board', 'NS', 'EW', 'Contract', 'By', 'Result']
+        hdrs = ['Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
         self.setHeaders(xMargin, hdrs, tblCols, allW)
         bIdx = 0
         for tbl in sorted([a for a in pdfData.keys()]):
@@ -287,9 +287,8 @@ class PDF(FPDF):
                     self.cell(tblCols[0], h, text=f"{tblRound['Board']*nPerSet+b+1}", align='C', border=1)
                     self.cell(tblCols[1], h, text=f"{tblRound['NS']}", align='C', border=1)
                     self.cell(tblCols[2], h, text=f"{tblRound['EW']}", align='C', border=1)
-                    self.cell(tblCols[3], h, text='', align='C', border=1)
-                    self.cell(tblCols[4], h, text='', align='C', border=1)
-                    self.cell(tblCols[5], h, text='', align='C', border=1)
+                    for c in range(3,len(hdrs)):
+                        self.cell(tblCols[c], h, text='', align='C', border=1)
                     y += h
                     self.set_xy(xMargin, y)
                 bIdx += 1
@@ -310,7 +309,7 @@ class PDF(FPDF):
         tblCols = []
         xMargin = PDF.margin * 2
         allW = 0
-        hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result']
+        hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
         self.setHeaders(xMargin, hdrs, tblCols, allW)
         for p in sorted(pairs.keys()):
             self.add_page()
@@ -319,15 +318,15 @@ class PDF(FPDF):
             h = self.lineHeight(self.font_size_pt)
             y += h
             self.set_xy(xMargin, y)
+            self.set_font(size=PDF.linePt)
             for r in sorted(pairs[p],key=lambda x: x[0]):
                 for b in range(nPerSet):
                     self.cell(tblCols[0], h, text=f'{r[0]+1}', align='C', border=1)
                     self.cell(tblCols[1], h, text=f'{r[3]*nPerSet+b+1}', align='C', border=1)
                     self.cell(tblCols[2], h, text=f'{r[1]}', align='C', border=1)
                     self.cell(tblCols[3], h, text=f'{r[2]}', align='C', border=1)
-                    self.cell(tblCols[4], h, text='', align='C', border=1)
-                    self.cell(tblCols[5], h, text='', align='C', border=1)
-                    self.cell(tblCols[6], h, text='', align='C', border=1)
+                    for c in range(4,len(hdrs)):
+                        self.cell(tblCols[c], h, text='', align='C', border=1)
                     y += h
                     self.set_xy(xMargin, y)
 
@@ -464,7 +463,8 @@ class PDF(FPDF):
         for i in range(len(hdrs)):
             cols.append(self.get_string_width(hdrs[i]) + 0.2)
         allW = sum(cols)
-        cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
+        if 'Contract' in hdrs:
+            cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
     def headerRow(self, leftMargin, y, cols, hdrs, title):
         self.set_xy(self.margin, y)
@@ -480,23 +480,26 @@ class PDF(FPDF):
         return y
 
     def sectionDivider(self, nSection, bIdx, leftMargin):
-        secY = self.eph / nSection
-        y = secY * (bIdx % nSection) + 0.5
+        h = self.lineHeight(self.font_size_pt)
+        secIdx = bIdx % nSection
+        if secIdx == 0:
+            return self.get_y() + h
+        secY = (self.h - 0.5) / nSection
+        y = secY * (secIdx % nSection) + 0.5 - h
         self.set_line_width(PDF.thinLine)
         self.set_dash_pattern(dash=0.1, gap=0.1)
-        self.line(x1=leftMargin, y1=y-0.5, x2=self.w - leftMargin, y2=y-0.5)
+        self.line(x1=leftMargin, y1=y, x2=self.w - leftMargin, y2=y)
         self.set_dash_pattern()
-        return y
+        return y + h
 
     # boards : {board #: [(r, tbl, ns, ew), ...]] 
     def travelers(self, log, nDeck, boards):
         tblCols = []
         xMargin = 0.5
         allW = 0
-        hdrs = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result']
+        hdrs = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
         self.setHeaders(xMargin, hdrs, tblCols, allW)
         bIdx = 0
-        secY = self.eph / 4
         for i in range(len(boards)):
             l = sorted(boards[i], key=lambda x: x[0])
             for d in range(nDeck):
@@ -513,9 +516,8 @@ class PDF(FPDF):
                     self.cell(tblCols[0], h, text=f'{x[0]+1}', align='C', border=1)
                     self.cell(tblCols[1], h, text=f'{x[2]}', align='C', border=1)
                     self.cell(tblCols[2], h, text=f'{x[3]}', align='C', border=1)
-                    self.cell(tblCols[3], h, text='', align='C', border=1)
-                    self.cell(tblCols[4], h, text='', align='C', border=1)
-                    self.cell(tblCols[5], h, text='', align='C', border=1)
+                    for c in range(3,len(hdrs)):
+                        self.cell(tblCols[c], h, text='', align='C', border=1)
                 bIdx += 1
                 y = self.sectionDivider(4, bIdx, xMargin)
 
