@@ -267,9 +267,8 @@ class PDF(FPDF):
     def pickupSlips(self, pdfData, nPerSet):
         tblCols = []
         xMargin = 0.5
-        allW = 0
         hdrs = ['Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.setHeaders(xMargin, hdrs, tblCols, allW)
+        self.setHeaders(xMargin, hdrs, tblCols)
         bIdx = 0
         for tbl in sorted([a for a in pdfData.keys()]):
             for r in range(pdfData[tbl]['nRound']):
@@ -308,9 +307,8 @@ class PDF(FPDF):
                     pairs[rData[r][0]['EW']].append((r, rData[r][0]['NS'], rData[r][0]['EW'], rData[r][0]['Board']))
         tblCols = []
         xMargin = PDF.margin * 2
-        allW = 0
         hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.setHeaders(xMargin, hdrs, tblCols, allW)
+        self.setHeaders(xMargin, hdrs, tblCols)
         for p in sorted(pairs.keys()):
             self.add_page()
             self.footer()
@@ -458,7 +456,7 @@ class PDF(FPDF):
         with self.rotation(angle=rot):
             self.cell(text=txt)
 
-    def setHeaders(self, leftMargin, hdrs, cols, allW):
+    def setHeaders(self, leftMargin, hdrs, cols):
         self.set_font(size=PDF.linePt)
         for i in range(len(hdrs)):
             cols.append(self.get_string_width(hdrs[i]) + 0.2)
@@ -467,7 +465,7 @@ class PDF(FPDF):
             cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
     def headerRow(self, leftMargin, y, cols, hdrs, title):
-        self.set_xy(self.margin, y)
+        self.set_xy(leftMargin, y)
         self.set_font(style='B', size=PDF.headerPt)
         h = self.lineHeight(self.font_size_pt)
         self.cell(text=title)
@@ -496,9 +494,8 @@ class PDF(FPDF):
     def travelers(self, log, nDeck, boards):
         tblCols = []
         xMargin = 0.5
-        allW = 0
         hdrs = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.setHeaders(xMargin, hdrs, tblCols, allW)
+        self.setHeaders(xMargin, hdrs, tblCols)
         bIdx = 0
         for i in range(len(boards)):
             l = sorted(boards[i], key=lambda x: x[0])
