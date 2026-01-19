@@ -95,6 +95,7 @@ class TeamMatch(DupBridge):
             switchIdx += 1
             row += 1
 
+    # simple sign-up sheet
     def Signup(self):
         headers = {'Team': self.pdf.epw * 0.05, 'Pairs': self.pdf.epw * 0.1, 'Name': self.pdf.epw * 0.7}
         self.pdf.add_page()
@@ -112,6 +113,7 @@ class TeamMatch(DupBridge):
             self.pdf.cell(w=headers['Name']/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
             self.pdf.ln()
 
+    # a card for each pair for navigation and general info
     def PairCard(self):
         tblHeaders = ['Round', 'Table', 'NS', 'EW', 'Boards']
         cols = []
@@ -141,18 +143,50 @@ class TeamMatch(DupBridge):
                 self.pdf.cell(cols[1], h, text=f'{t+1}', align='C', border=1)
                 self.pdf.cell(cols[2], h, text=f'{self.boardData[r]['Tables'][t][0]}', align='C', border=1)
                 self.pdf.cell(cols[3], h, text=f'{self.boardData[r]['Tables'][t][1]}', align='C', border=1)
-                if t == 0:
-                    bN = r
-                else:
-                    bN = r + self.boards // 2 + 1
-                    if (bN % self.boards) == 1:
-                        bN -= self.boards
-                    bN -= 1
+                bds = self.boardSet(t, r)
                 txt = ""
-                for b in range(self.boards//2-1):
-                    txt += f"{bN+b+1},"
-                txt += f"{bN + self.boards // 2}"
-                self.pdf.cell(cols[4], h, text=txt, align='C', border=1)
+                for b in bds:
+                    txt += f"{b+1},"
+                self.pdf.cell(cols[4], h, text=txt[:-1], align='C', border=1)
+
+    def boardSet(self, t, r):
+        bds = []
+        if t == 0:
+            bN = r
+        else:
+            bN = r + self.boards // 2 + 1
+            if (bN % self.boards) == 1:
+                bN -= self.boards
+            bN -= 1
+        for b in range(self.boards//2):
+            bds.append(bN + b)
+        return bds
+
+    # score keeping for each pair
+    def Journal(self):
+        hdrs = ['Board', 'Table', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        cols = []
+        self.pdf.setHeaders(self.pdf.margin, hdrs, cols)
+        w = sum(cols)
+        leftMargin = (self.pdf.w - w) / 2
+        for p in range(4):
+            self.pdf.add_page()
+            self.headerFooter()
+            y = self.pdf.headerRow(leftMargin, self.pdf.margin, cols, hdrs, f"Pair {p+1}")
+            self.pdf.set_font(size=self.pdf.linePt)
+            h = self.pdf.lineHeight(self.pdf.font_size_pt);
+            for r in range(len(self.boardData)):
+                y += h
+                self.pdf.set_xy(leftMargin, y)
+                self.pdf.cell(cols[0], h, text=f'{r+1}', align='C', border=1)
+                t = 0 if (p+1) in self.boardData[r]['Tables'][0] else 1
+                self.pdf.cell(cols[1], h, text=f'{t+1}', align='C', border=1)
+                self.pdf.cell(cols[2], h, text=f'{self.boardData[r]['Tables'][t][0]}', align='C', border=1)
+                self.pdf.cell(cols[3], h, text=f'{self.boardData[r]['Tables'][t][1]}', align='C', border=1)
+                for i in range(4,len(hdrs)):
+                    self.pdf.cell(cols[i], h, text='', align='C', border=1)
+
+        return
 
     # Table of boards played, no PDF equivalent
     def Boards(self):
@@ -375,7 +409,8 @@ class TeamMatch(DupBridge):
         self.Boards()
         self.IMPTable()
         self.ScoreTable()
-        self.PairCard()
+        self.PairCard() # pdf only
+        self.Journal()  # pdf only
         self.save()
         return
 
