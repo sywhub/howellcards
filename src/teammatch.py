@@ -30,8 +30,8 @@ class TeamMatch(DupBridge):
         self.Fake = fake
         self.TeamPairs = {1: [1, 2, 3, 4], 2: [1, 3, 2, 4], 3: [1, 4, 2, 3]}
 
-    # Roster changes with each "switch"
-    def rosterSheet(self):
+    # Roster sheet
+    def Roster(self):
         ws = self.wb.active
         ws.title = 'Roster'
         row = 1
@@ -95,33 +95,64 @@ class TeamMatch(DupBridge):
             switchIdx += 1
             row += 1
 
-    def Roster(self):
-        self.rosterSheet()
-        return
-
-        # convert percents into inches
+    def Signup(self):
         headers = {'Team': self.pdf.epw * 0.05, 'Pairs': self.pdf.epw * 0.1, 'Name': self.pdf.epw * 0.7}
-
         self.pdf.add_page()
         self.headerFooter()
         self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
         self.pdf.set_y(self.pdf.margin + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
-        self.pdf.cell(w=self.pdf.epw, text='Team Match Roster', align='C')
+        self.pdf.cell(w=self.pdf.epw, text='Pair Signup', align='C')
         self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
 
-        for team in range(1,3):
-            self.pdf.set_font(style='B', size=self.pdf.bigPt, family=self.pdf.serifFont)
+        for p in range(4):
+            self.pdf.set_font(style='', size=self.pdf.linePt, family=self.pdf.sansSerifFont)
             self.pdf.set_x(self.pdf.margin+headers['Team'])
-            self.pdf.cell(text=f'Team {team}')
+            self.pdf.cell(w=headers['Pairs'], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'Pair {p+1}', align='C', border=1)
+            self.pdf.cell(w=headers['Name']/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
+            self.pdf.cell(w=headers['Name']/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
             self.pdf.ln()
-            for p in range(1,3):
-                self.pdf.set_font(style='', size=self.pdf.linePt, family=self.pdf.sansSerifFont)
-                self.pdf.set_x(self.pdf.margin+headers['Team'])
-                self.pdf.cell(w=headers['Pairs'], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'Pair {p}', align='C', border=1)
-                self.pdf.cell(w=headers['Name']/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
-                self.pdf.cell(w=headers['Name']/2, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
-                self.pdf.ln()
-            self.pdf.ln()
+
+    def PairCard(self):
+        tblHeaders = ['Round', 'Table', 'NS', 'EW', 'Boards']
+        cols = []
+        self.pdf.setHeaders(self.pdf.margin, tblHeaders, cols)
+        cols[4] = max(self.pdf.get_string_width(f"88,88,88,88")+0.2,cols[4])
+        w = sum(cols)
+        self.pdf.add_page()
+        self.headerFooter()
+        for p in range(4):
+            if p % 2 == 0:
+                xStart = (self.pdf.w - 2*w) / 3
+            else:
+                xStart += xStart + w
+            if p // 2 == 0:
+                yStart = 0.5
+            else:
+                yStart = self.pdf.eph / 2 + 0.5
+            y = self.pdf.headerRow(xStart, yStart, cols, tblHeaders, f"Pair {p+1}")
+            self.pdf.set_font(size=self.pdf.linePt)
+            h = self.pdf.lineHeight(self.pdf.font_size_pt);
+            for r in range(0, len(self.boardData), self.boards // 2):
+                y += h
+                rb = r // (self.boards // 2)
+                self.pdf.set_xy(xStart, y)
+                self.pdf.cell(cols[0], h, text=f'{rb+1}', align='C', border=1)
+                t = 0 if (p+1) in self.boardData[r]['Tables'][0] else 1
+                self.pdf.cell(cols[1], h, text=f'{t+1}', align='C', border=1)
+                self.pdf.cell(cols[2], h, text=f'{self.boardData[r]['Tables'][t][0]}', align='C', border=1)
+                self.pdf.cell(cols[3], h, text=f'{self.boardData[r]['Tables'][t][1]}', align='C', border=1)
+                if t == 0:
+                    bN = r
+                else:
+                    bN = r + self.boards // 2 + 1
+                    if (bN % self.boards) == 1:
+                        bN -= self.boards
+                    bN -= 1
+                txt = ""
+                for b in range(self.boards//2-1):
+                    txt += f"{bN+b+1},"
+                txt += f"{bN + self.boards // 2}"
+                self.pdf.cell(cols[4], h, text=txt, align='C', border=1)
 
     # Table of boards played, no PDF equivalent
     def Boards(self):
@@ -146,10 +177,14 @@ class TeamMatch(DupBridge):
         # next row is the headers
         row = self.headerRow(ws, headers, 2)
         pairCol = headers.index('NS')+1
+        self.boardData = []
         for board in range(self.boards * self.rounds * self.switches):
+            self.boardData.append({})
             col = 1
             ws.cell(row, col).value = board+1
             vulIdx = (board + board // 4) % 4
+            self.boardData[board]['Vul'] = vulIdx
+            self.boardData[board]['Tables'] = []
             switchIdx = board // (self.rounds * self.boards) + 1
             # change opponents for each table
             swap = (board % (self.rounds * self.boards)) // self.boards
@@ -184,6 +219,8 @@ class TeamMatch(DupBridge):
                     ws.cell(row, scoreCol+5).value = f'{checkNum}{self.rc2a1(row, scoreCol+7)}-{self.rc2a1(row-1, scoreCol+7)},"")'
                     checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+8)}),ISNUMBER({self.rc2a1(row-1, scoreCol+8)})),'
                     ws.cell(row, scoreCol+6).value = f'{checkNum}{self.rc2a1(row, scoreCol+8)}-{self.rc2a1(row-1, scoreCol+8)},"")'
+                self.boardData[board]['Tables'].append((int(ws.cell(row, pairCol).value[-1]),
+                                                        int(ws.cell(row, pairCol+1).value[-1])))
                 # setup net scores
                 NSraw=self.rc2a1(row, scoreCol+1)
                 EWraw=self.rc2a1(row, scoreCol+2)
@@ -275,9 +312,8 @@ class TeamMatch(DupBridge):
         here = os.path.dirname(os.path.abspath(__file__))
         fn = f'{here}/../teammatch{self.rounds}x{self.boards}x{self.switches}'
         self.wb.save(f'{fn}.xlsx')
+        self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
-        #self.pdf.output(f'{fn}.pdf')
-        #print(f'Saved {fn}')
 
     # Some text for the TD/Organizer
     def Instructions(self):
@@ -315,7 +351,7 @@ class TeamMatch(DupBridge):
 
     def headerFooter(self):
         notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
-        footer = f'{self.Rounds} Rounds, swap every {self.boards} boards'
+        footer = f'{self.switches*self.rounds} Rounds'
         self.pdf.set_font(size=self.pdf.tinyPt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         w = self.pdf.get_string_width(notice)
@@ -334,11 +370,12 @@ class TeamMatch(DupBridge):
     # Orchestrator
     def match(self):
         # self.Instructions()
+        self.Signup()
         self.Roster()
         self.Boards()
-        #self.Score()
         self.IMPTable()
         self.ScoreTable()
+        self.PairCard()
         self.save()
         return
 
