@@ -2,6 +2,11 @@
 # Generate a team match setup
 #   A PDF with Roster and Score sheets
 #   An Excel spreadsheet to enter the results and calculate the scores
+#
+# This program arrange a tournament for 4 pairs to play in 1 to 3 rounds of "team matches".
+# Each match is formally a match of 2 teams of 2 pairs.  At the end of each match, we change the composition
+# of both teams.  In 3 matches, therefore, each pair has played with the other 2.
+#
 import argparse
 import logging
 from maininit import setlog
@@ -17,23 +22,25 @@ class TeamMatch(DupBridge):
         self.pdf = pdf.PDF()
         self.wb = Workbook()
         self.boards = 4
-        self.switches = 0
+        self.matches = 0
         self.rounds = 2
         self.vulTbl = ['None', 'NS', 'EW', 'Both']
+        self.TeamPairs = {1: [1, 2, 3, 4], 2: [1, 3, 2, 4], 3: [1, 4, 2, 3]}
         self.Fake = True
 
     # record metadata
-    def setup(self, rounds, boards, switch, fake):
+    def setup(self, rounds, boards, match, fake):
         self.boards = boards
-        self.switches = switch
+        self.matches = match
         self.rounds = rounds
         self.Fake = fake
-        self.TeamPairs = {1: [1, 2, 3, 4], 2: [1, 3, 2, 4], 3: [1, 4, 2, 3]}
 
     # Roster sheet
+    # The roster tab also shows the tournament results
     def Roster(self):
-        ws = self.wb.active
+        ws = self.wb.active # the first tab
         ws.title = 'Roster'
+        # First simple list of names
         row = 1
         ws.cell(row, 1).value = 'Players'
         ws.cell(row, 1).font = self.HeaderFont
@@ -50,52 +57,59 @@ class TeamMatch(DupBridge):
             ws.cell(row, 3).value = self.placeHolderName()
             row += 1
         row += 1
+        
+        # The sum of all earned IMP for each pair. The pair ranking.
         for pair in range(4):
             sumImp = "=+"
-            for s in range(self.switches):
+            for s in range(self.matches):
                 seat = self.TeamPairs[s+1].index(pair+1) // 2
-                if s > 0 and s < self.switches:
+                if s > 0 and s < self.matches:
                     sumImp += '+'
                 sumImp += self.rc2a1(9+s*3, 5+seat)
             ws.cell(2+pair, 4).value = sumImp
 
-
-        switchIdx = 1
-        while self.switches >= switchIdx:
+        matchIdx = 1
+        while self.matches >= matchIdx:
             ws.cell(row, 1).font = self.HeaderFont
             ws.cell(row, 1).alignment = self.centerAlign
-            ws.cell(row, 1).value = f'Rotation #{switchIdx}'
+            ws.cell(row, 1).value = f'Match #{matchIdx}'
             ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,6).coordinate}')
             row += 1
 
+            # Each match is a competition of 2 teams.
+            # The team composition changes for each match.
             for t in range(2):
-                ws.cell(row, 2*t+1).value = f'Team {t+(switchIdx-1)*2+1}'
+                ws.cell(row, 2*t+1).value = f'Team {t+(matchIdx-1)*2+1}'
                 ws.cell(row, 2*t+1).font = self.HeaderFont
                 ws.cell(row, 2*t+1).alignment = self.centerAlign
                 ws.merge_cells(f'{ws.cell(row,2*t+1).coordinate}:{ws.cell(row,2*t+2).coordinate}')
+            # The IMP for each team
             ws.cell(row, 5).font = self.HeaderFont
             ws.cell(row, 5).alignment = self.centerAlign
             ws.cell(row, 5).value = 'IMP'
             ws.merge_cells(f'{ws.cell(row,5).coordinate}:{ws.cell(row,6).coordinate}')
             row += 1
-            idx = switchIdx % 3
+            idx = matchIdx % 3
             if idx == 0:
                 idx = 3
             for i in range(4):
                 ws.cell(row, i+1).value = f'Pair {self.TeamPairs[idx][i]}'
-            nRows = self.rounds * self.boards * 2
-            rStart = 3 + (switchIdx - 1) * nRows
+            # The sum of IMP won/lost with each board these two team played during the match
+            # Which is n rounds of m boards, each board played twice on each table
+            nRows = self.rounds * self.boards * 2   # rows for each match
+            rStart = 3 + (matchIdx - 1) * nRows # the starting board row
             rEnd = rStart + nRows - 1
+            # Excel SUMIF function 
             formula = f'=SUMIF(Boards!C{rStart}:C{rEnd},{self.rc2a1(row,1)},Boards!K{rStart}:K{rEnd})'
             formula +=f'+SUMIF(Boards!C{rStart}:C{rEnd},{self.rc2a1(row,2)},Boards!K{rStart}:K{rEnd})'
             ws.cell(row, 5).value = formula
             formula = f'=SUMIF(Boards!D{rStart}:D{rEnd},{self.rc2a1(row,3)},Boards!L{rStart}:L{rEnd})'
             formula +=f'+SUMIF(Boards!D{rStart}:D{rEnd},{self.rc2a1(row,4)},Boards!L{rStart}:L{rEnd})'
             ws.cell(row, 6).value = formula
-            switchIdx += 1
+            matchIdx += 1
             row += 1
 
-    # simple sign-up sheet
+    # simple sign-up sheet, PDF
     def Signup(self):
         headers = {'Team': self.pdf.epw * 0.05, 'Pairs': self.pdf.epw * 0.1, 'Name': self.pdf.epw * 0.7}
         self.pdf.add_page()
@@ -114,11 +128,12 @@ class TeamMatch(DupBridge):
             self.pdf.ln()
 
     # a card for each pair for navigation and general info
+    # Since these are exactly 4 pairs, we fit them into one page
     def PairCard(self):
         tblHeaders = ['Round', 'Table', 'NS', 'EW', 'Boards']
         cols = []
         self.pdf.setHeaders(self.pdf.margin, tblHeaders, cols)
-        cols[4] = max(self.pdf.get_string_width(f"88,88,88,88")+0.2,cols[4])
+        cols[4] = max(self.pdf.get_string_width(f"{'8'*6}{','*2}")+0.2,cols[4]) # make it wide enough to fit 3 boards
         w = sum(cols)
         self.pdf.add_page()
         self.headerFooter()
@@ -131,7 +146,7 @@ class TeamMatch(DupBridge):
                 yStart = 0.5
             else:
                 yStart = self.pdf.eph / 2 + 0.5
-            y = self.pdf.headerRow(xStart, yStart, cols, tblHeaders, f"Pair {p+1}")
+            y = self.pdf.headerRow(xStart, yStart, cols, tblHeaders, f"Pair {p+1} Play Info")
             self.pdf.set_font(size=self.pdf.linePt)
             h = self.pdf.lineHeight(self.pdf.font_size_pt);
             for r in range(0, len(self.boardData), self.boards // 2):
@@ -149,6 +164,7 @@ class TeamMatch(DupBridge):
                     txt += f"{b+1},"
                 self.pdf.cell(cols[4], h, text=txt[:-1], align='C', border=1)
 
+    # board #s for each half of round
     def boardSet(self, t, r):
         bds = []
         if t == 0:
@@ -164,7 +180,7 @@ class TeamMatch(DupBridge):
 
     # score keeping for each pair
     def Journal(self):
-        hdrs = ['Board', 'Table', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        hdrs = ['Board', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
         cols = []
         self.pdf.setHeaders(self.pdf.margin, hdrs, cols)
         w = sum(cols)
@@ -172,7 +188,7 @@ class TeamMatch(DupBridge):
         for p in range(4):
             self.pdf.add_page()
             self.headerFooter()
-            y = self.pdf.headerRow(leftMargin, self.pdf.margin, cols, hdrs, f"Pair {p+1}")
+            y = self.pdf.headerRow(leftMargin, self.pdf.margin, cols, hdrs, f"Pair {p+1} Journal")
             self.pdf.set_font(size=self.pdf.linePt)
             h = self.pdf.lineHeight(self.pdf.font_size_pt);
             for r in range(len(self.boardData)):
@@ -183,7 +199,11 @@ class TeamMatch(DupBridge):
                 self.pdf.cell(cols[1], h, text=f'{t+1}', align='C', border=1)
                 self.pdf.cell(cols[2], h, text=f'{self.boardData[r]['Tables'][t][0]}', align='C', border=1)
                 self.pdf.cell(cols[3], h, text=f'{self.boardData[r]['Tables'][t][1]}', align='C', border=1)
-                for i in range(4,len(hdrs)):
+                vulIdx = (r + r // 4) % 4
+                self.pdf.set_font_size(self.pdf.notePt - 2);
+                self.pdf.cell(cols[4], h, text=f'{self.vulTbl[vulIdx]}', align='C', border=1)
+                self.pdf.set_font_size(self.pdf.linePt);
+                for i in range(5,len(hdrs)):
                     self.pdf.cell(cols[i], h, text='', align='C', border=1)
 
         return
@@ -212,16 +232,16 @@ class TeamMatch(DupBridge):
         row = self.headerRow(ws, headers, 2)
         pairCol = headers.index('NS')+1
         self.boardData = []
-        for board in range(self.boards * self.rounds * self.switches):
+        for board in range(self.boards * self.rounds * self.matches):
             self.boardData.append({})
             col = 1
             ws.cell(row, col).value = board+1
             vulIdx = (board + board // 4) % 4
             self.boardData[board]['Vul'] = vulIdx
             self.boardData[board]['Tables'] = []
-            switchIdx = board // (self.rounds * self.boards) + 1
+            matchIdx = board // (self.rounds * self.boards) + 1
             # change opponents for each table
-            swap = (board % (self.rounds * self.boards)) // self.boards
+            swap = (board % self.boards) // (self.boards // 2)   # 1st or 2nd half of the round
             for t in range(2):  # 2 tables
                 if self.Fake:
                     self.fakeContracts(ws, row)
@@ -240,15 +260,15 @@ class TeamMatch(DupBridge):
                 # Set which pair against which
                 # Compute the differences of the net scores
                 if t == 0:
-                    ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[switchIdx][0]}'
-                    ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][2 + swap]}'
+                    ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[matchIdx][0]}'
+                    ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[matchIdx][2 + swap]}'
                     checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+7)}),ISNUMBER({self.rc2a1(row+1, scoreCol+7)})),'
                     ws.cell(row, scoreCol+5).value = f'{checkNum}{self.rc2a1(row, scoreCol+7)}-{self.rc2a1(row+1, scoreCol+7)},"")'
                     checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+8)}),ISNUMBER({self.rc2a1(row+1, scoreCol+8)})),'
                     ws.cell(row, scoreCol+6).value = f'{checkNum}{self.rc2a1(row, scoreCol+8)}-{self.rc2a1(row+1, scoreCol+8)},"")'
                 else:
-                    ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[switchIdx][3 - swap]}'
-                    ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[switchIdx][1]}'
+                    ws.cell(row, pairCol).value = f'Pair {self.TeamPairs[matchIdx][3 - swap]}'
+                    ws.cell(row, pairCol+1).value = f'Pair {self.TeamPairs[matchIdx][1]}'
                     checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+7)}),ISNUMBER({self.rc2a1(row-1, scoreCol+7)})),'
                     ws.cell(row, scoreCol+5).value = f'{checkNum}{self.rc2a1(row, scoreCol+7)}-{self.rc2a1(row-1, scoreCol+7)},"")'
                     checkNum = f'=IF(AND(ISNUMBER({self.rc2a1(row, scoreCol+8)}),ISNUMBER({self.rc2a1(row-1, scoreCol+8)})),'
@@ -266,7 +286,7 @@ class TeamMatch(DupBridge):
                 ws.cell(row-1, i).border = Border(bottom=bd)
         # hint that this section is not to touch
         bd = Side(style='thin', color='f08000')
-        for board in range(self.boards * self.rounds * self.switches*2+2):
+        for board in range(self.boards * self.rounds * self.matches*2+2):
             bexist = ws.cell(board+1, 13).border 
             ws.cell(board+1, 13).border = Border(left=bd, bottom=bexist.bottom)
         
@@ -289,7 +309,7 @@ class TeamMatch(DupBridge):
                 row = self.headerRow(ws, [f'Table {t+1}, Round {r}'], row)
                 ws.merge_cells(f'{ws.cell(row-1,1).coordinate}:{ws.cell(row-1,len(headers)+1).coordinate}')
                 row = self.headerRow(ws, headers, row)
-                for board in range(startBoard, self.boardPerSwitch * self.switchPerRound + startBoard):
+                for board in range(startBoard, self.boardPerSwitch * self.matchPerRound + startBoard):
                     ws.cell(row, 1).value = board
                     row += 1
                 startBoard = board + 1
@@ -301,7 +321,7 @@ class TeamMatch(DupBridge):
         self.scoreSheet(list(headers.keys()))
         
         # How many rounds per page?
-        boardsPerRound = self.switches * self.boards
+        boardsPerRound = self.matches * self.boards
         if boardsPerRound >= 8:
             roundPerPage = 2
         elif boardsPerRound <= 4:
@@ -334,7 +354,7 @@ class TeamMatch(DupBridge):
                 self.pdf.set_font(style='', size=self.pdf.linePt)
 
                 self.pdf.set_font(size=self.pdf.linePt, family=self.pdf.sansSerifFont)
-                for board in range(startBoard, self.boardPerSwitch * self.switchPerRound + startBoard):
+                for board in range(startBoard, self.boardPerSwitch * self.matchPerRound + startBoard):
                     self.pdf.cell(w=headers['Board'], h=self.pdf.lineHeight(self.pdf.font_size_pt), text=f'{board}', align='C', border=1)
                     for col in [v for k,v in headers.items() if k != 'Board']:
                         self.pdf.cell(w=col, h=self.pdf.lineHeight(self.pdf.font_size_pt), text='', border=1)
@@ -344,48 +364,20 @@ class TeamMatch(DupBridge):
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../teammatch{self.rounds}x{self.boards}x{self.switches}'
+        fn = f'{here}/../teammatch{self.rounds}x{self.boards}x{self.matches}'
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
 
     # Some text for the TD/Organizer
     def Instructions(self):
-        txt = '''There is a matching spreadsheet for this PDF.
-               Print this PDF before the match.
-               Have both teams sign in the roster page.
-               Team 1 sits NS of table 1, EW of table 2.  Team 2 sits EW of table 1, NS of table 2.
-               Place the scoring sheet on each of the table.
-               Put boards 1 to 4 on table 1, 5 to 8 on table 2. Each table shuffle and play the boards.
-               When done, swap the boards and continue.
-               Team 2 pairs swap seats to their team mates of the other table.
-               Put boards 9 to 12 on table 1, 13 to 16 on table 2.
-               Shuffle, play, swap boards, finish all boards.
-               Collect both scoring sheets, and enter the results in the spreadsheet.'''
-        self.headerFooter()
-        self.pdf.set_font(style='B', size=self.pdf.headerPt)
-        h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        line = h * 3
-        toWrite = 'Team Match Setup'
-        w = self.pdf.get_string_width(toWrite)
-        x = self.pdf.setHCenter(w)
-        self.pdf.set_xy(x, line)
-        self.pdf.cell(text=toWrite)
-        y = self.pdf.get_y()+1
-        self.pdf.set_font(size=self.pdf.linePt)
-        h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        nLine = 1
-        for t in txt.split('\n'):
-            self.pdf.set_xy(1, y)
-            self.pdf.cell(h, h, f'{nLine}.', align='R')
-            self.pdf.set_xy(1+h, y)
-            self.pdf.multi_cell(self.pdf.epw-2, h=h, text=t.strip())
-            y = self.pdf.get_y()
-            nLine += 1
+        tourneyMeta = [['Rounds',self.rounds * 2], ['Boards per round',self.boards // 2], ['Number of Matches', self.matches]]
+        self.pdf.meta(None, "Team Match", tourneyMeta)
+        self.pdf.instructions(None, "teaminstructions.txt")
 
     def headerFooter(self):
         notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
-        footer = f'{self.switches*self.rounds} Rounds'
+        footer = f'{f"{self.matches} Matches of " if self.matches > 1 else ""}{self.rounds * 2} {self.boards // 2}-Boards Rounds '
         self.pdf.set_font(size=self.pdf.tinyPt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         w = self.pdf.get_string_width(notice)
@@ -403,7 +395,7 @@ class TeamMatch(DupBridge):
 
     # Orchestrator
     def match(self):
-        # self.Instructions()
+        self.Instructions()
         self.Signup()
         self.Roster()
         self.Boards()
@@ -416,11 +408,17 @@ class TeamMatch(DupBridge):
 
 if __name__ == '__main__':
     log = setlog('team', None)
+    def even_type(value):
+        ivalue = int(value)
+        if ivalue % 2 != 0:
+            raise argparse.ArgumentTypeError(f"{value} is not an even number")
+        return ivalue
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
-    parser.add_argument('-r', '--round', type=int, default=2, help='Number of rounds')
-    parser.add_argument('-b', '--boards', type=int, default=4, help='Number of boards per round')
-    parser.add_argument('-s', '--switch', type=int, default=1, help='Number of switches')
+    parser.add_argument('-r', '--round', type=even_type, default=2, help='Number of rounds')
+    parser.add_argument('-b', '--boards', type=even_type, default=4, help='Number of boards per round')
+    parser.add_argument('-m', '--match', type=int, choices=range(1,4), default=1, help='Number of matches')
     parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
@@ -428,5 +426,6 @@ if __name__ == '__main__':
             log.setLevel(l[1])
             break
     team = TeamMatch(log)
-    team.setup(rounds=args.round, boards=args.boards, switch=args.switch, fake=args.fake)
+    # A match has n rounds, each round has m boards, divided into two halves, each half of the boards
+    team.setup(rounds=args.round, boards=args.boards, match=args.match, fake=args.fake)
     team.match()

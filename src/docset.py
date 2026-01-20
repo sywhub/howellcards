@@ -145,7 +145,7 @@ class DupBridge:
 			row += 1
 
 	def placeHolderName(self):
-		return f'PH{random.randint(11,99)}'
+		return f'Name {random.randint(11,90)}'
 
 
 class HowellDocSet(DupBridge):
@@ -212,7 +212,7 @@ class HowellDocSet(DupBridge):
 
 		self.pdf.noright(self.log, f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.')
 		self.pdf.meta(self.log, ws.title, tourneyMeta)
-		self.pdf.instructions(self.log)
+		self.pdf.instructions(self.log, "instructions.txt")
 		self.rosterSheet()
 
 

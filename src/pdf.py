@@ -91,8 +91,8 @@ class PDF(FPDF):
 
     # part of the meta pagee 
     # Some text for the TD/Organizer
-    def instructions(self, log):
-        with open("instructions.txt", "r") as f:
+    def instructions(self, log, fname):
+        with open(fname, "r") as f:
             txt = f.read()
             txt = txt.replace('\n',' ')
             txt = txt[1:]
