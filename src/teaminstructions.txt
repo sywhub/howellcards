@@ -1,0 +1,7 @@
+#There is a matching spreadsheet for this PDF.
+#Each pair has their seating card and a journal sheet.
+#At the end of the round, the table may exchange boards.
+#At the end of every 2 rounds, players may change seats.
+#Each pair must record the results of each board played.
+#Instruct the players not to reveal their journal to the opponents.
+#At the end of the tournament, collect all journal sheets and enter them into the spreadsheet.
