@@ -396,10 +396,10 @@ class HowellDocSet(DupBridge):
 					sh.cell(row, 13).number_format = '#0.00'
 					sumRange = f'{sh.cell(row, 24).coordinate}:{sh.cell(row, 24+nTbl-2).coordinate}'
 					sh.cell(row, 22).value = f'=IFERROR(SUM({sumRange})/{nTbl-1},"")'
-					sh.cell(row, 22).number_format = '0.00%'
+					sh.cell(row, 22).number_format = '0.0%'
 					sumRange = f'{sh.cell(row, 24+nTbl-1).coordinate}:{sh.cell(row, 24+nTbl-1+nTbl-2).coordinate}'
 					sh.cell(row, 23).value = f'=IFERROR(SUM({sumRange})/{nTbl-1},"")'
-					sh.cell(row, 23).number_format = '0.00%'
+					sh.cell(row, 23).number_format = '0.0%'
 
 					# IMP Computation sequence
 					# 1. For each side, record their "net" raw scores.  Negative if the other side scored
@@ -436,11 +436,12 @@ class HowellDocSet(DupBridge):
 	# Also the final result
 	def rosterSheet(self):
 		self.log.debug('Creating Roster Sheet')
-		headers = ['Pair #', 'Player 1', 'Player 2', 'IMP']
+		headers = ['Pair #', 'Player 1', 'Player 2', 'IMP', 'MP', 'MP Sum %']
 		self.pdf.roster(self.log, self.pairs, headers[:-1])
 
 		sh = self.wb.create_sheet('Roster')
 		row = self.headerRow(sh, headers)
+		sh.merge_cells(f'{self.rc2a1(1,6)}:{self.rc2a1(1,7)}')
 		totalPlayed = int((self.pairs + self.pairs % 2) / 2) * self.decks * (self.pairs - 1)
 		for i in range(self.pairs):
 			sh.cell(i+row, 1).value = i+1
@@ -448,13 +449,22 @@ class HowellDocSet(DupBridge):
 			sh.cell(i+row, 3).value = self.placeHolderName()
 			sh.column_dimensions['B'].width = 25
 			sh.column_dimensions['C'].width = 25
-			sum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$L$3:$L${totalPlayed+2})"
+			IMPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$L$3:$L${totalPlayed+2})"
+			MPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$V$3:$V${totalPlayed+2})"
 			if self.pairs % 2 != 0 or i != self.pairs - 1:
-				sum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$M$3:$M${totalPlayed+2})"
+				IMPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$M$3:$M${totalPlayed+2})"
+				MPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$W$3:$W${totalPlayed+2})"
 			else:
-				sum2=0
-			sh.cell(i+row, 4).value = f"{sum1}+{sum2}"
+				IMPsum2=0
+				MPsum2=0
+			sh.cell(i+row, 4).value = f"{IMPsum1}+{IMPsum2}"
 			sh.cell(i+row, 4).number_format = '#0.00'
+			sh.cell(i+row, 5).value = f"=({self.rc2a1(i+row, 6)}+{self.rc2a1(i+row, 7)})/{self.decks*(self.pairs-1)}"
+			sh.cell(i+row, 5).number_format = '0.0%'
+			sh.cell(i+row, 6).value = f"={MPsum1}"
+			sh.cell(i+row, 6).number_format = '0.0%'
+			sh.cell(i+row, 7).value = f"={MPsum2}"
+			sh.cell(i+row, 7).number_format = '0.0%'
 		# Check to make sure IMPs add up to zero
 		ft = Font(bold=True,color="FF0000")
 		topBorder = Border(top=Side(style='thin', color="FF0000"))
