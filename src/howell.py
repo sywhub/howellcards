@@ -30,8 +30,8 @@ def howellFromJson(log, pairs, fake, jsonfile):
 if __name__ == '__main__':
     log = setlog('howell', None)
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--pair', type=int)
-    parser.add_argument('-f', '--fake', action='store_true')
+    parser.add_argument('-p', '--pair', type=int, choices=range(5,15), help='# of pairs in the tournament')
+    parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     parser.add_argument('-d', '--debug', type=str, default='INFO')
     parser.add_argument('-j', '--jsonfile', type=str)
     args = parser.parse_args()
@@ -40,7 +40,7 @@ if __name__ == '__main__':
             log.setLevel(l[1])
             break
 
-    if args.pair is not None and args.pair >= 5 and args.pair < 15:
+    if args.pair: 
         howellFromJson(log, args.pair, args.fake, args.jsonfile)
     elif args.pair is None:
         for p in range(5,15):

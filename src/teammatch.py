@@ -390,9 +390,6 @@ class TeamMatch(DupBridge):
         self.pdf.set_xy(x, y)
         self.pdf.cell(text=footer)
 
-    def rc2a1(self, r, c):
-        return f"{chr(c-1+ord('A'))}{r}"
-
     # Orchestrator
     def match(self):
         self.Instructions()

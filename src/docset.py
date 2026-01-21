@@ -147,6 +147,9 @@ class DupBridge:
 	def placeHolderName(self):
 		return f'Name {random.randint(11,90)}'
 
+	def rc2a1(self, r, c):
+		return f"{chr(c-1+ord('A'))}{r}"
+
 
 class HowellDocSet(DupBridge):
 	def __init__(self, log, toFake=False):
@@ -248,12 +251,13 @@ class HowellDocSet(DupBridge):
 					sh.cell(row, 6).value = vulTbl[(b-1)%4]
 					sh.cell(row, 6).alignment = self.centerAlign
 					if self.fakeResult:
-						if random.random() < 0.95:
+						if random.random() < 0.90:
 							pickSide = 10 if random.random() >= 0.5 else 11
 							score = random.randint(2,80)*10
 							sh.cell(row, pickSide).value = score
 						else:
-							sh.cell(row, 10).value = 'A=='
+							sh.cell(row, 10).value = 'Avg'
+							sh.cell(row, 11).value = 'Avg'
 					row += 1
 				for c in range(2,12):
 					sh.cell(row, c).border = thinLine
@@ -296,48 +300,52 @@ class HowellDocSet(DupBridge):
 		vulTbl = ['None', 'NS', 'EW', 'Both']
 		self.log.debug('Saving by Board')
 		sh = self.wb.create_sheet('By Board', 2)	# insert it as the 2nd sheet
-		headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW',\
-			 'NS', 'EW', 'NS Net', 'EW Net']
+		headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
 		nTbl = len(rounds[0])
-		leftBorder = Border(left=Side(style='thick',color="000000"))
+		leftBorder = Border(left=Side(style='medium',color="000000"))
 		noChangeFont = Font(bold=True, italic=True, color='FF0000')
 		# The contract column should be wider for data entry
 		sh.column_dimensions[chr(headers.index('Contract')+ord('A'))].width = 30
 
 		# first row setup some spanning column headers
-		sh.cell(1, 10).value = 'Contract Pt'
+		mergeHdrs = [['Contract Pt', 2], ['IMP', 2], ['IMP Calculation', nTbl*2],
+			  ['MP', 2], ['MP Calculation', nTbl*2]]
+		impHdrs = ['NS', 'EW', 'NS Net', 'EW Net', 'NS Pair-Wise', 'EW Pair-Wise']
+		mpHdrs = ['NS', 'EW', 'NS MP Score', 'EW MP Score']
+		cStart = 10
+		for h in mergeHdrs:
+			sh.cell(1, cStart).value = h[0]
+			sh.cell(1, cStart).font = noChangeFont
+			sh.cell(1, cStart).alignment = self.centerAlign
+			sh.merge_cells(f'{sh.cell(1,cStart).coordinate}:{sh.cell(1,cStart+h[1]-1).coordinate}')
+			cStart += h[1]
 		sh.cell(1, 10).font = self.HeaderFont
-		sh.cell(1, 10).alignment = self.centerAlign
-		sh.merge_cells(f'{sh.cell(1,10).coordinate}:{sh.cell(1,11).coordinate}')
-		sh.cell(1, 12).value = 'IMP'
-		sh.cell(1, 12).font = noChangeFont
-		sh.cell(1, 12).alignment = self.centerAlign
-		sh.cell(1, 12).border = leftBorder
-		row = self.headerRow(sh, headers, 2)
-		sh.merge_cells(f'{sh.cell(1,12).coordinate}:{sh.cell(1,13).coordinate}')
-		sh.cell(1, 14).value = 'IMP Calculation'
-		sh.cell(1, 14).alignment = self.centerAlign
-		sh.cell(1,14).font = noChangeFont
-		sh.cell(1,14).alignment = self.centerAlign
-		sh.merge_cells(f'{sh.cell(1, 14).coordinate}:{sh.cell(1, 14+nTbl*2-1).coordinate}')
+		cStart = len(headers) + 1
+		for h in impHdrs[:4]:
+			sh.cell(2, cStart).value = h
+			sh.cell(2, cStart).font = noChangeFont
+			sh.cell(2, cStart).alignment = self.centerAlign
+			cStart += 1
+		for h in impHdrs[4:]:
+			sh.cell(2, cStart).value = h
+			sh.cell(2, cStart).font = noChangeFont
+			sh.cell(2, cStart).alignment = self.centerAlign
+			sh.merge_cells(f'{sh.cell(2,cStart).coordinate}:{sh.cell(2,cStart+nTbl-2).coordinate}')
+			cStart += nTbl - 1
+		for h in mpHdrs[:2]:
+			sh.cell(2, cStart).value = h
+			sh.cell(2, cStart).font = noChangeFont
+			sh.cell(2, cStart).alignment = self.centerAlign
+			cStart += 1
+		for h in mpHdrs[2:]:
+			sh.cell(2, cStart).value = h
+			sh.cell(2, cStart).font = noChangeFont
+			sh.cell(2, cStart).alignment = self.centerAlign
+			sh.merge_cells(f'{sh.cell(2,cStart).coordinate}:{sh.cell(2,cStart+nTbl-2).coordinate}')
+			cStart += nTbl - 1
 
-		compIdx = headers.index('NS Net')+1	# where IMP calculation begins
-		sh.cell(2, compIdx+2).value = 'NS Pair-Wise'
-		sh.cell(2, compIdx+1+nTbl).value = 'EW Pair-Wise'
-		sh.merge_cells(f'{sh.cell(2, compIdx+2).coordinate}:{sh.cell(2, compIdx+nTbl).coordinate}')
-		sh.merge_cells(f'{sh.cell(2, compIdx+1+nTbl).coordinate}:{sh.cell(2, compIdx+2*nTbl-1).coordinate}')
+
 		row = self.headerRow(sh, headers, 2)
-		sh.cell(2, compIdx-2).font = noChangeFont
-		sh.cell(2, compIdx-2).border = leftBorder
-		sh.cell(2, compIdx-1).font = noChangeFont
-		sh.cell(2,compIdx).font = noChangeFont
-		sh.cell(2,compIdx).alignment = self.centerAlign
-		sh.cell(2,compIdx+1).font = noChangeFont
-		sh.cell(2,compIdx+1).alignment = self.centerAlign
-		sh.cell(2,compIdx+2).font = noChangeFont
-		sh.cell(2,compIdx+2).alignment = self.centerAlign
-		sh.cell(2,compIdx+1+nTbl).font = noChangeFont
-		sh.cell(2,compIdx+1+nTbl).alignment = self.centerAlign
 
 		# build a datastructure for ease of navigation
 		# just pivotig the source data
@@ -353,18 +361,28 @@ class HowellDocSet(DupBridge):
 		self.pdf.travelers(self.log, self.decks, boards)
 		for b in list:
 			for i in range(self.decks):
-				sh.cell(row, 1).value = b*self.decks+i+1
+				bIdx = b*self.decks+i
+				sh.cell(row, 1).value = bIdx + 1
 				# vulnerability
-				vulShift = int((b*self.decks+i) / 4)
-				vulIdx = (b*self.decks + i + vulShift) % 4
+				vulShift = bIdx // 4
+				vulIdx = (bIdx + vulShift) % 4
 				for r in range(len(boards[b])):
+					# tbls: [round, table, NS, EW]
 					tbls = boards[b][r]
 					# this part just reference the "mother sheet"
-					sh.cell(row, 2).value = f"='By Round'!A{tbls[0]*nTbl*self.decks+2}"
-					for c in range(ord('B'),ord('K')+1):
-						cVal = f"'By Round'!{chr(c if c < ord('F') else c + 1)}{tbls[0]*nTbl*self.decks+tbls[1]*self.decks+2}"
-						bcheck = f'ISBLANK({cVal},"",{cVal})'
-						sh.cell(row, 3+c-ord('B')).value = f"={cVal}"
+					rBase = tbls[0]*nTbl*self.decks+2
+					sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(rBase, 1)}"
+					for c in range(2, 11):
+						bBase = rBase + tbls[1]*self.decks
+						if c >= 6:
+							bBase += bIdx % self.decks
+						a1 = self.rc2a1(bBase, c if c < 5 else c + 1)
+						cVal = f"'By Round'!{a1}"
+						if c >= 6:
+							bcheck = f'=IF(ISBLANK({cVal}),"",{cVal})'
+						else:
+							bcheck= f'={cVal}'
+						sh.cell(row, 1+c).value = bcheck 
 					sh.cell(row, 6).value = vulTbl[vulIdx]
 					sh.cell(row, 6).alignment = self.centerAlign
 
@@ -373,7 +391,6 @@ class HowellDocSet(DupBridge):
 					avgRange = f'{sh.cell(row, 16).coordinate}:{sh.cell(row, 16+nTbl-2).coordinate}'
 					sh.cell(row, 12).value = f'=IFERROR(AVERAGE({avgRange}),"")'
 					sh.cell(row, 12).number_format = '#0.00'
-					sh.cell(row, 12).border = leftBorder
 					avgRange = f'{sh.cell(row, 16+nTbl-1).coordinate}:{sh.cell(row, 16+nTbl-1+nTbl-2).coordinate}'
 					sh.cell(row, 13).value = f'=IFERROR(AVERAGE({avgRange}),"")'
 					sh.cell(row, 13).number_format = '#0.00'
@@ -401,6 +418,11 @@ class HowellDocSet(DupBridge):
 						sh.cell(row, 14+nTbl-1+colInc).value = formula
 						colInc += 1
 					row += 1
+		borderCols = [12, 14, 14+nTbl*2, 14+nTbl*2+2]
+		for r in range(1, row):
+			for c in borderCols:
+				sh.cell(r, c).border = leftBorder
+
 
 	# Roster sheet
 	# Also the final result
