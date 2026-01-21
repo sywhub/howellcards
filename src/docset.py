@@ -394,6 +394,12 @@ class HowellDocSet(DupBridge):
 					avgRange = f'{sh.cell(row, 16+nTbl-1).coordinate}:{sh.cell(row, 16+nTbl-1+nTbl-2).coordinate}'
 					sh.cell(row, 13).value = f'=IFERROR(AVERAGE({avgRange}),"")'
 					sh.cell(row, 13).number_format = '#0.00'
+					sumRange = f'{sh.cell(row, 24).coordinate}:{sh.cell(row, 24+nTbl-2).coordinate}'
+					sh.cell(row, 22).value = f'=IFERROR(SUM({sumRange})/{nTbl-1},"")'
+					sh.cell(row, 22).number_format = '0.00%'
+					sumRange = f'{sh.cell(row, 24+nTbl-1).coordinate}:{sh.cell(row, 24+nTbl-1+nTbl-2).coordinate}'
+					sh.cell(row, 23).value = f'=IFERROR(SUM({sumRange})/{nTbl-1},"")'
+					sh.cell(row, 23).number_format = '0.00%'
 
 					# IMP Computation sequence
 					# 1. For each side, record their "net" raw scores.  Negative if the other side scored
@@ -411,11 +417,13 @@ class HowellDocSet(DupBridge):
 						lookup=f"VLOOKUP(ABS(N{row}-N{row+j}),'IMP Table'!$A$2:$C$26,3)*SIGN(N{row}-N{row+j})"
 						formula=f'=IF({cond},{lookup},"")'
 						sh.cell(row, 14+colInc).value = formula
+						sh.cell(row, 22+colInc).value = f'=IF(ISNUMBER(N{row}),IF(ISNUMBER(N{row+j}),IF(N{row}>N{row+j},1,if(N{row}=N{row+j},0.5,0)),""),0.5)'
 						# EW comparisons
 						cond=f'AND(ISNUMBER(O{row}),ISNUMBER(O{row+j}))'
 						lookup=f"VLOOKUP(ABS(O{row}-O{row+j}),'IMP Table'!$A$2:$C$26,3)*SIGN(O{row}-O{row+j})"
 						formula=f'=IF({cond},{lookup},"")'
 						sh.cell(row, 14+nTbl-1+colInc).value = formula
+						sh.cell(row, 22+nTbl-1+colInc).value = f'=IF(ISNUMBER(O{row}),IF(ISNUMBER(O{row+j}),IF(O{row}>O{row+j},1,if(O{row}=O{row+j},0.5,0)),""),0.5)'
 						colInc += 1
 					row += 1
 		borderCols = [12, 14, 14+nTbl*2, 14+nTbl*2+2]
