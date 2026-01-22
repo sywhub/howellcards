@@ -3,6 +3,7 @@
 # Also produce PDF file the event
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
+from openpyxl.worksheet.formula import ArrayFormula
 import pdf
 import random
 import datetime
@@ -15,7 +16,6 @@ class DupBridge:
 		self.centerAlign = Alignment(horizontal='center')
 		self.trumps = ('D/C', 'H/S', 'NT')	
 		self.thinLine = Border(top=Side(style='thin', color="000000"))
-		self.thickLine = Border(top=Side(style='medium', color="F80000"))
 
 	# IMP conversion table
 	def IMPTable(self):
@@ -155,7 +155,6 @@ class HowellDocSet(DupBridge):
 	def __init__(self, log, toFake=False):
 		super().__init__(log)
 		self.notice = 'For public domain. No rights reserved. Generated on'
-		self.travelerText = '0 for contract made, "Avg" for incomplete'
 		self.fakeResult = toFake
 		self.pdf = pdf.PDF()
 		self.wb = Workbook()
@@ -186,14 +185,14 @@ class HowellDocSet(DupBridge):
 	# Initialize some state.
 	# Create meta and roster sheets
 	def init(self, pairs, nRound):
-		self.pairs = pairs;
+		self.pairs = pairs
 		if pairs <= 6:
 			self.decks = 3
 		else:
 			self.decks = 2
 
 		# meta data
-		tourneyMeta = [['Howell Arrangement (IMP)'],
+		tourneyMeta = [['Howell Arrangement (IMP & MP)'],
 			['Pairs',pairs], ['Tables',int((pairs + (pairs % 2))/ 2)],
 			['Rounds',nRound], ['Boards per round',self.decks], ['Total Boards to play', self.decks*nRound]]
 
@@ -211,8 +210,6 @@ class HowellDocSet(DupBridge):
 				ws.cell(row+2, 2).font = self.HeaderFont
 		ws.column_dimensions['A'].width = 30
 
-		self.Instructions(ws, len(tourneyMeta)+11)
-
 		self.pdf.noright(self.log, f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.')
 		self.pdf.meta(self.log, ws.title, tourneyMeta)
 		self.pdf.instructions(self.log, "instructions.txt")
@@ -227,10 +224,16 @@ class HowellDocSet(DupBridge):
 	# Its value is another dictionary of "ns", "ew", and "board"
 	# which are the pair IDs and the board "set" to be play for that table at that round
 	def saveByRound(self, rounds):
-		headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS Score', 'EW Score']
+		self.log.debug('Saving by Round')
+		headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
 		self.log.debug('Saving by Round')
 		sh = self.wb.create_sheet('By Round')
-		row = self.headerRow(sh, headers)
+		sCol = headers.index('Result')+2
+		sh.cell(1, sCol).value = 'Scores'
+		sh.merge_cells(f'{self.rc2a1(1, sCol)}:{self.rc2a1(1, sCol+1)}')
+		sh.cell(1, sCol).font = self.HeaderFont
+		sh.cell(1, sCol).alignment = self.centerAlign
+		row = self.headerRow(sh, headers, 2)
 		sh.column_dimensions[chr(headers.index('Contract')+ord('A'))].width = 30
 		sh.column_dimensions['H'].width = 15
 		sh.column_dimensions['I'].width = 15
@@ -259,7 +262,7 @@ class HowellDocSet(DupBridge):
 				for c in range(2,12):
 					sh.cell(row, c).border = self.thinLine
 			for c in range(1,12):
-				sh.cell(row, c).border = self.thickLine
+				sh.cell(row, c).border = self.thinLine
 
 	# Present the same data table-oriented
 	def saveByTable(self, rounds):
@@ -298,7 +301,6 @@ class HowellDocSet(DupBridge):
 		sh = self.wb.create_sheet('By Board', 2)	# insert it as the 2nd sheet
 		headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
 		nTbl = len(rounds[0])
-		leftBorder = Border(left=Side(style='medium',color="000000"))
 		noChangeFont = Font(bold=True, italic=True, color='FF0000')
 		# The contract column should be wider for data entry
 		sh.column_dimensions[chr(headers.index('Contract')+ord('A'))].width = 30
@@ -306,8 +308,8 @@ class HowellDocSet(DupBridge):
 		# first row setup some spanning column headers
 		mergeHdrs = [['Score', 2], ['IMP', 2], ['IMP Calculation', nTbl*2],
 			  ['MP', 2], ['MP Calculation', nTbl*2 - 2]]
-		impHdrs = ['NS', 'EW', 'NS Net', 'EW Net', 'NS Pair-Wise', 'EW Pair-Wise']
-		mpHdrs = ['NS', 'EW', 'NS MP Score', 'EW MP Score']
+		calcHdrs = ['NS', 'EW', 'NS Net', 'EW Net', ['NS Pair-Wise', nTbl - 2], ['EW Pair-Wise', nTbl - 2],
+			'NS', 'EW', ['NS MP Score', nTbl - 2], ['EW MP Score', nTbl - 2]]
 		cStart = 10
 		for h in mergeHdrs:
 			sh.cell(1, cStart).value = h[0]
@@ -317,29 +319,16 @@ class HowellDocSet(DupBridge):
 			cStart += h[1]
 		sh.cell(1, 10).font = self.HeaderFont
 		cStart = len(headers) + 1
-		for h in impHdrs[:4]:
-			sh.cell(2, cStart).value = h
+		for h in calcHdrs:
 			sh.cell(2, cStart).font = noChangeFont
 			sh.cell(2, cStart).alignment = self.centerAlign
-			cStart += 1
-		for h in impHdrs[4:]:
-			sh.cell(2, cStart).value = h
-			sh.cell(2, cStart).font = noChangeFont
-			sh.cell(2, cStart).alignment = self.centerAlign
-			sh.merge_cells(f'{sh.cell(2,cStart).coordinate}:{sh.cell(2,cStart+nTbl-2).coordinate}')
-			cStart += nTbl - 1
-		for h in mpHdrs[:2]:
-			sh.cell(2, cStart).value = h
-			sh.cell(2, cStart).font = noChangeFont
-			sh.cell(2, cStart).alignment = self.centerAlign
-			cStart += 1
-		for h in mpHdrs[2:]:
-			sh.cell(2, cStart).value = h
-			sh.cell(2, cStart).font = noChangeFont
-			sh.cell(2, cStart).alignment = self.centerAlign
-			sh.merge_cells(f'{sh.cell(2,cStart).coordinate}:{sh.cell(2,cStart+nTbl-2).coordinate}')
-			cStart += nTbl - 1
-
+			if isinstance(h, str):
+				sh.cell(2, cStart).value = h
+				cStart += 1
+			else:
+				sh.cell(2, cStart).value = h[0]
+				sh.merge_cells(f'{sh.cell(2,cStart).coordinate}:{sh.cell(2,cStart+h[1]).coordinate}')
+				cStart += h[1] + 1
 
 		row = self.headerRow(sh, headers, 2)
 
@@ -356,22 +345,19 @@ class HowellDocSet(DupBridge):
 		list = sorted([x for x in boards.keys()])
 		self.pdf.travelers(self.log, self.decks, boards)
 		# each iteration advanceds by a set of boards, governed by self.decks
-		for b in list:	# b is a set
+		for b in list:	# b is a set of self.decks
 			for i in range(self.decks):	# each board of that set
 				bIdx = b*self.decks+i	# the actual board #, zero based
 				sh.cell(row, 1).value = bIdx + 1
 				# loop through the "rounds" this board were played
 				for r in range(len(boards[b])):
-					# tbls: [round, table, NS, EW]
-					tbls = boards[b][r]
-					# this part just reference the "mother sheet"
-					rBase = tbls[0]*nTbl*self.decks+2
-					sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(rBase, 1)}"
+					tbls = boards[b][r]	 # tbls: [round, table, NS, EW]
+					# always reference the "By Round" sheet for ease of editing by hand
+					roundRow = tbls[0]*nTbl*self.decks+3
+					sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(roundRow, 1)}"
 					for c in range(2, 11):
-						bBase = rBase + tbls[1]*self.decks
-						if c >= 6:
-							bBase += bIdx % self.decks
-						a1 = self.rc2a1(bBase, c if c < 5 else c + 1)
+						boardRow = roundRow + tbls[1]*self.decks
+						a1 = self.rc2a1(boardRow, c if c < 5 else c + 1)
 						cVal = f"'By Round'!{a1}"
 						if c >= 6:
 							bcheck = f'=IF(ISBLANK({cVal}),"",{cVal})'
@@ -422,13 +408,14 @@ class HowellDocSet(DupBridge):
 						colInc += 1
 					row += 1
 		borderCols = [12, 14, 14+nTbl*2, 14+nTbl*2+2]
+		leftBorder = Border(left=Side(style='medium',color="000000"))
 		for r in range(1, row):
 			for c in borderCols:
 				sh.cell(r, c).border = leftBorder
 		for r in range(2, len(rounds)*nTbl*self.decks, nTbl):
 			for c in range(1, 22+nTbl*2):
 				bds = sh.cell(r, c).border
-				sh.cell(r, c).border = Border(left=bds.left, bottom=Side(style='thin', color="000000"))
+				sh.cell(r, c).border = Border(left=bds.left, bottom=self.thinLine.top)
 
 
 
@@ -436,12 +423,11 @@ class HowellDocSet(DupBridge):
 	# Also the final result
 	def rosterSheet(self):
 		self.log.debug('Creating Roster Sheet')
-		headers = ['Pair #', 'Player 1', 'Player 2', 'IMP', 'MP', 'MP Sum %']
+		headers = ['Pair #', 'Player 1', 'Player 2', 'IMP', 'MP']
 		self.pdf.roster(self.log, self.pairs, headers[:-1])
 
 		sh = self.wb.create_sheet('Roster')
 		row = self.headerRow(sh, headers)
-		sh.merge_cells(f'{self.rc2a1(1,6)}:{self.rc2a1(1,7)}')
 		totalPlayed = int((self.pairs + self.pairs % 2) / 2) * self.decks * (self.pairs - 1)
 		for i in range(self.pairs):
 			sh.cell(i+row, 1).value = i+1
@@ -459,12 +445,25 @@ class HowellDocSet(DupBridge):
 				MPsum2=0
 			sh.cell(i+row, 4).value = f"{IMPsum1}+{IMPsum2}"
 			sh.cell(i+row, 4).number_format = '#0.00'
-			sh.cell(i+row, 5).value = f"=({self.rc2a1(i+row, 6)}+{self.rc2a1(i+row, 7)})/{self.decks*(self.pairs-1)}"
+			sh.cell(i+row, 5).value = f"={MPsum1}/{self.decks*(self.pairs-1)}+{MPsum2}/{self.decks*(self.pairs-1)}"
 			sh.cell(i+row, 5).number_format = '0.0%'
-			sh.cell(i+row, 6).value = f"={MPsum1}"
-			sh.cell(i+row, 6).number_format = '0.0%'
-			sh.cell(i+row, 7).value = f"={MPsum2}"
-			sh.cell(i+row, 7).number_format = '0.0%'
+		
+		IMPRow = self.pairs + row + 2
+		sh.cell(IMPRow, 1).value = 'Array Formula below, remove single quote'
+		IMPRow += 1
+		#arrayRange = f'{self.rc2a1(IMPRow,1)}:{self.rc2a1(IMPRow+self.pairs-1,5)}'
+		#formulaTxt = f"=SORT({self.rc2a1(row+1, 1)}:{self.rc2a1(row+self.pairs-1,5)},4,-1)"
+		#sh[self.rc2a1(IMPRow,1)] = ArrayFormula(arrayRange, formulaTxt)
+		sh.cell(IMPRow,1).value = f"'=SORT({self.rc2a1(row, 1)}:{self.rc2a1(row+self.pairs-1,5)},4,-1)"
+		for i in range(self.pairs):
+			sh.cell(IMPRow+i,4).number_format = "#0.00"
+			sh.cell(IMPRow+i,5).number_format = "0.00%"
+		MPRow = self.pairs + IMPRow + 2
+		sh.cell(MPRow,1).value = f"'=SORT({self.rc2a1(row, 1)}:{self.rc2a1(row+self.pairs-1,5)},5,-1)"
+		for i in range(self.pairs):
+			sh.cell(MPRow+i,4).number_format = "#0.00"
+			sh.cell(MPRow+i,5).number_format = "0.00%"
+
 		# Check to make sure IMPs add up to zero
 		ft = Font(bold=True,color="FF0000")
 		topBorder = Border(top=Side(style='thin', color="FF0000"))
@@ -497,21 +496,3 @@ class HowellDocSet(DupBridge):
 				sh.cell(i+4, j+1).border = border
 		for c in range(len(headers)):
 			sh.column_dimensions[chr(ord('A')+c)].width = colWidthTbl[c]
-
-
-
-	def Instructions(self, sh, row):
-		text = ['There is a matching PDF file for this spreadsheet.  Take a look of that first.',
-		  	'The PDF file has better traveler and movement instrucdtion sheet.  This is for plan B.',
-			'Shuffle and deal number of boards based on the Board sheet.  Insert cards into slots.',
-			'Make sure traveler sheet has board # written/printed on.  Fold with score side hidden.  Tuck it into the North slot for the corresponding board.',
-			'Assign pair # to each participating pairs.  Usually by drawing.',
-			'Seat each pair based on the Table sheet',
-			'Assign North to be score keeper and South as the board caddy.',
-			'At the end of the ternament, collect traveler and record into the spreadsheet.  Everything else has been automated.']
-		sh.cell(row, 1).value = 'For Tournament Director/Organizer'
-		for r in range(len(text)):
-			sh.cell(row+r+1, 1).value = f'{r+1}. {text[r]}'
-		for r in range(len(text)+1):
-			sh.cell(row+r, 1).font = self.HeaderFont
-
