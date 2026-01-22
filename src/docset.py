@@ -14,6 +14,8 @@ class DupBridge:
 		self.HeaderFont = Font(bold=True, size=14)
 		self.centerAlign = Alignment(horizontal='center')
 		self.trumps = ('D/C', 'H/S', 'NT')	
+		self.thinLine = Border(top=Side(style='thin', color="000000"))
+		self.thickLine = Border(top=Side(style='medium', color="F80000"))
 
 	# IMP conversion table
 	def IMPTable(self):
@@ -49,32 +51,26 @@ class DupBridge:
 	def ScoreTable(self):
 		sh = self.wb.create_sheet('Scoring Table')
 		for c in [3, 11]:
-			sh.cell(1, c).value = 'Not Vulnerable'
-			sh.cell(1, c).font = self.HeaderFont
-			sh.merge_cells(f'{sh.cell(1, c).coordinate}:{sh.cell(1, c+2).coordinate}')
-			sh.cell(1, c).alignment = self.centerAlign
-		for c in [6, 14]:
-			sh.cell(1, c).value = 'Vulnerable'
-			sh.cell(1, c).font = self.HeaderFont
-			sh.merge_cells(f'{sh.cell(1, c).coordinate}:{sh.cell(1, c+2).coordinate}')
-			sh.cell(1, c).alignment = self.centerAlign
-		headers = ['Contract', 'Result', '', 'X', 'XX', '', 'X', 'XX']
+			v = ['Not Vulnerable', 'Vulnerable']
+			for x in range(2):
+				sh.cell(1, c+x*3).value = v[x]
+				sh.cell(1, c+x*3).font = self.HeaderFont
+				sh.merge_cells(f'{sh.cell(1, c+x*3).coordinate}:{sh.cell(1, c+x*3+2).coordinate}')
+				sh.cell(1, c+x*3).alignment = self.centerAlign
+		headers = ['Contract', 'Made', '', 'X', 'XX', '', 'X', 'XX']
 		row = self.headerRow(sh, headers, 2)
 		self.scorePenalty(sh, row, len(headers)+2, headers[2:])
 		for i in range(1,8):
 			for trump in self.trumps:
 				sh.cell(row, 1).value = f'{i} {trump}'
+				sh.cell(row, 1).font = self.HeaderFont
+				sh.cell(row, 1).alignment = self.centerAlign
 				for j in range(0, 8-i):
-					sh.cell(row, 2).value = j
-					sh.cell(row, 2).number_format = '+#0;-#0;0'
-					sh.cell(row, 3).value = self.score(i, trump, j, False, 0)
-					sh.cell(row, 4).value = self.score(i, trump, j, False, 1)
-					sh.cell(row, 5).value = self.score(i, trump, j, False, 2)
-					sh.cell(row, 6).value = self.score(i, trump, j, True, 0)
-					sh.cell(row, 7).value = self.score(i, trump, j, True, 1)
-					sh.cell(row, 8).value = self.score(i, trump, j, True, 2)
-					for c in range(3,9):
-						sh.cell(row, c).number_format = '#0'
+					sh.cell(row, 2).value = j+1
+					for k in range(3):
+						sh.cell(row, 3+k).value = self.score(i, trump, j, False, k)
+						sh.cell(row, 6+k).value = self.score(i, trump, j, True, k)
+						sh.cell(row, 3+k).number_format = sh.cell(row, 6+k).number_format = "#0"
 					row += 1
 
 	# This is based on the rules for duplicate bridge
@@ -149,6 +145,10 @@ class DupBridge:
 
 	def rc2a1(self, r, c):
 		return f"{chr(c-1+ord('A'))}{r}"
+
+	def vulLookup(self, bidx):
+		vulShift = bidx // 4
+		return ['None', 'NS', 'EW', 'Both'][(bidx + vulShift) % 4]
 
 
 class HowellDocSet(DupBridge):
@@ -227,7 +227,6 @@ class HowellDocSet(DupBridge):
 	# Its value is another dictionary of "ns", "ew", and "board"
 	# which are the pair IDs and the board "set" to be play for that table at that round
 	def saveByRound(self, rounds):
-		vulTbl = ['None', 'NS', 'EW', 'Both']
 		headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS Score', 'EW Score']
 		self.log.debug('Saving by Round')
 		sh = self.wb.create_sheet('By Round')
@@ -235,8 +234,6 @@ class HowellDocSet(DupBridge):
 		sh.column_dimensions[chr(headers.index('Contract')+ord('A'))].width = 30
 		sh.column_dimensions['H'].width = 15
 		sh.column_dimensions['I'].width = 15
-		thinLine = Border(top=Side(style='thin', color="000000"))
-		thickLine = Border(top=Side(style='medium', color="F80000"))
 		for rIdx, r in enumerate(rounds):
 			sh.cell(row, 1).value = rIdx+1
 			for tIdx, tbl in enumerate(r):
@@ -248,7 +245,7 @@ class HowellDocSet(DupBridge):
 				sh.cell(row, 4).value = tbl['EW']
 				for b in self.boardList(tbl['Board']):
 					sh.cell(row, 5).value = b
-					sh.cell(row, 6).value = vulTbl[(b-1)%4]
+					sh.cell(row, 6).value = self.vulLookup(b-1)
 					sh.cell(row, 6).alignment = self.centerAlign
 					if self.fakeResult:
 						if random.random() < 0.90:
@@ -260,9 +257,9 @@ class HowellDocSet(DupBridge):
 							sh.cell(row, 11).value = 'Avg'
 					row += 1
 				for c in range(2,12):
-					sh.cell(row, c).border = thinLine
+					sh.cell(row, c).border = self.thinLine
 			for c in range(1,12):
-				sh.cell(row, c).border = thickLine
+				sh.cell(row, c).border = self.thickLine
 
 	# Present the same data table-oriented
 	def saveByTable(self, rounds):
@@ -297,7 +294,6 @@ class HowellDocSet(DupBridge):
 	# "self.decks".  We make it 3 for 6-pair tournaments and 2 otherwise.
 	# In this "by board" sheet, we also do the scoring.
 	def saveByBoard(self, rounds):
-		vulTbl = ['None', 'NS', 'EW', 'Both']
 		self.log.debug('Saving by Board')
 		sh = self.wb.create_sheet('By Board', 2)	# insert it as the 2nd sheet
 		headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
@@ -308,8 +304,8 @@ class HowellDocSet(DupBridge):
 		sh.column_dimensions[chr(headers.index('Contract')+ord('A'))].width = 30
 
 		# first row setup some spanning column headers
-		mergeHdrs = [['Contract Pt', 2], ['IMP', 2], ['IMP Calculation', nTbl*2],
-			  ['MP', 2], ['MP Calculation', nTbl*2]]
+		mergeHdrs = [['Score', 2], ['IMP', 2], ['IMP Calculation', nTbl*2],
+			  ['MP', 2], ['MP Calculation', nTbl*2 - 2]]
 		impHdrs = ['NS', 'EW', 'NS Net', 'EW Net', 'NS Pair-Wise', 'EW Pair-Wise']
 		mpHdrs = ['NS', 'EW', 'NS MP Score', 'EW MP Score']
 		cStart = 10
@@ -359,13 +355,12 @@ class HowellDocSet(DupBridge):
 
 		list = sorted([x for x in boards.keys()])
 		self.pdf.travelers(self.log, self.decks, boards)
-		for b in list:
-			for i in range(self.decks):
-				bIdx = b*self.decks+i
+		# each iteration advanceds by a set of boards, governed by self.decks
+		for b in list:	# b is a set
+			for i in range(self.decks):	# each board of that set
+				bIdx = b*self.decks+i	# the actual board #, zero based
 				sh.cell(row, 1).value = bIdx + 1
-				# vulnerability
-				vulShift = bIdx // 4
-				vulIdx = (bIdx + vulShift) % 4
+				# loop through the "rounds" this board were played
 				for r in range(len(boards[b])):
 					# tbls: [round, table, NS, EW]
 					tbls = boards[b][r]
@@ -383,7 +378,7 @@ class HowellDocSet(DupBridge):
 						else:
 							bcheck= f'={cVal}'
 						sh.cell(row, 1+c).value = bcheck 
-					sh.cell(row, 6).value = vulTbl[vulIdx]
+					sh.cell(row, 6).value = self.vulLookup(bIdx)
 					sh.cell(row, 6).alignment = self.centerAlign
 
 					# There are steps to calculate IMP for each board
@@ -430,6 +425,11 @@ class HowellDocSet(DupBridge):
 		for r in range(1, row):
 			for c in borderCols:
 				sh.cell(r, c).border = leftBorder
+		for r in range(2, len(rounds)*nTbl*self.decks, nTbl):
+			for c in range(1, 22+nTbl*2):
+				bds = sh.cell(r, c).border
+				sh.cell(r, c).border = Border(left=bds.left, bottom=Side(style='thin', color="000000"))
+
 
 
 	# Roster sheet
@@ -468,25 +468,24 @@ class HowellDocSet(DupBridge):
 		# Check to make sure IMPs add up to zero
 		ft = Font(bold=True,color="FF0000")
 		topBorder = Border(top=Side(style='thin', color="FF0000"))
-		sh.cell(self.pairs+2, 3).value='Sum to Zero'
 		sh.cell(self.pairs+2, 4).value=f'=SUM(D2:D{self.pairs+1})'
 		sh.cell(self.pairs+2, 4).number_format = '#0.00'
-		sh.cell(self.pairs+2, 3).font = ft
-		sh.cell(self.pairs+2, 3).border = topBorder
+		sh.cell(self.pairs+2, 5).value=f'=AVERAGE(E2:E{self.pairs+1})'
+		sh.cell(self.pairs+2, 5).number_format = '0.00%'
 		sh.cell(self.pairs+2, 4).font = ft
 		sh.cell(self.pairs+2, 4).border = topBorder
+		sh.cell(self.pairs+2, 5).font = ft
+		sh.cell(self.pairs+2, 5).border = topBorder
 
 	def Traveler(self):
 		self.log.debug('Creating Traveler Template Sheet')
-		headers = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result']
-		colWidthTbl = [8, 8, 8, 30, 8, 10]
+		headers = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+		colWidthTbl = [8, 8, 8, 30, 8, 10, 8, 8]
 		sh = self.wb.create_sheet('Traveler Template')
 		sh.cell(1, 1).value = 'Board #'
-		sh.cell(1, 4).value = self.travelerText
-		sh.merge_cells(f'{sh.cell(1,1).coordinate}:{sh.cell(1,2).coordinate}')
 		titleFont = Font(size=self.HeaderFont.size + 8, bold=True)
 		sh.cell(1, 1).font = titleFont
-		sh.cell(1, 3).font = titleFont
+		sh.merge_cells(f'{sh.cell(1,1).coordinate}:{sh.cell(1,len(headers)).coordinate}')
 		row = self.headerRow(sh, headers, 3)
 		side=Side(style='thin',color='000000')
 		border=Border(top=side,left=side,bottom=side,right=side)
