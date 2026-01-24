@@ -445,7 +445,7 @@ class HowellDocSet(DupBridge):
 				MPsum2=0
 			sh.cell(i+row, 4).value = f"{IMPsum1}+{IMPsum2}"
 			sh.cell(i+row, 4).number_format = '#0.00'
-			sh.cell(i+row, 5).value = f"={MPsum1}/{self.decks*(self.pairs-1)}+{MPsum2}/{self.decks*(self.pairs-1)}"
+			sh.cell(i+row, 5).value = f"{MPsum1}/{self.decks*(self.pairs-1)}+{MPsum2}/{self.decks*(self.pairs-1)}"
 			sh.cell(i+row, 5).number_format = '0.0%'
 		
 		IMPRow = self.pairs + row + 2
