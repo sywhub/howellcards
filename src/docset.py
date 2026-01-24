@@ -222,7 +222,8 @@ class HowellDocSet(PairGames):
 				ws.cell(row+2, 2).font = self.HeaderFont
 		ws.column_dimensions['A'].width = 30
 
-		self.pdf.noright(self.log, f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.')
+		self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
+			f'Howell Movement for {pairs} Pairs')
 		self.pdf.meta(self.log, ws.title, tourneyMeta)
 		self.pdf.instructions(self.log, "instructions.txt")
 		self.rosterSheet()
@@ -275,6 +276,7 @@ class HowellDocSet(PairGames):
 		self.log.debug('Saving by Table')
 		nTbl = len(rounds[0])
 		nRounds = len(rounds)
+		# tbl#: {'nRound': # of rounds, r: ({'NS': ns, 'EW': ew, 'Board': board set #}, "boards set")}
 		pdfData = {}
 		# iterate by table then by round
 		for tbl in range(nTbl):

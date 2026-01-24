@@ -43,6 +43,23 @@ class PDF(FPDF):
         x = (self.w - linewidth) / 2
         return x
     
+    def HeaderFooterText(self, h, f):
+        self.headerText = h
+        self.footerText = f
+
+    def headerFooter(self):
+        self.set_font(size=self.tinyPt)
+        h = self.lineHeight(self.font_size_pt)
+        w = self.get_string_width(self.headerText)
+        x = self.setHCenter(w)
+        self.set_xy(x, h)
+        self.cell(text=self.headerText)
+        w = self.get_string_width(self.footerText)
+        x = self.setHCenter(w)
+        y = self.eph - h * 2
+        self.set_xy(x, y)
+        self.cell(text=self.footerText)
+    
     # put the (none) copyright notice on top
     # (Old habit dies hard)
     def noright(self, log, txt):

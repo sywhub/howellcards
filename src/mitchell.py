@@ -29,19 +29,25 @@ class Mitchell(PairGames):
         self.oddPairs = self.pairs % 2 == 1
         self.SITOUT = "Sit-Out"
         self.fake = f
-        self.footer = f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.boards} Boards per round'
         self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
         self.pdf = pdf.PDF()
         self.wb = Workbook()
+
+        notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
+        footer = f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.boards} Boards per round'
+        self.pdf.HeaderFooterText(notice, footer)
     
     def go(self):
+        # the sequence of calls is important
         self.roster()
-        self.roundTab()
+        self.roundTab() # build data structure for late
         self.boardTab()
         self.results()
         self.ScoreTable()
-        self.Pickups()
-        self.Journal()
+        self.Pickups()  # PDF only
+        self.Tables()
+        self.Travelers()  # PDF only
+        self.Journal()  # PDF only
         self.save()
         return
 
@@ -54,7 +60,7 @@ class Mitchell(PairGames):
         ws.title = 'Roster'
         # First simple list of names
         row = 1
-        ws.cell(row, 1).value = self.footer
+        ws.cell(row, 1).value = self.pdf.footerText
         ws.cell(row, 1).font = self.HeaderFont
         ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,5).coordinate}')
         ws.cell(row, 1).alignment = self.centerAlign
@@ -81,7 +87,7 @@ class Mitchell(PairGames):
         ws.column_dimensions['C'].width = 30
         
     def rosterPDF(self):
-        self.headerFooter()
+        self.pdf.headerFooter()
         y = self.meta()
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -246,9 +252,140 @@ class Mitchell(PairGames):
         return sh, row
 
     def Pickups(self):
+        # rearrange by tables
+        tables = {}
+        for b,r in self.boardData.items():
+            for v in r:
+                if v[1] not in tables:
+                    tables[v[1]] = {}
+                if v[0] not in tables[v[1]]:
+                    tables[v[1]][v[0]] = []
+                tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
+        tblCols = []
+        xMargin = 0.5
+        hdrs = ['Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        bIdx = 0
+        for t in sorted(tables.keys()):
+            if bIdx % 4 == 0:
+                self.pdf.add_page()
+                self.pdf.headerFooter()
+                y = 0.5
+            for r in sorted(tables[t].keys()):
+                y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, f"Pickup: Table {t+1}, Round {r+1}")
+                h = self.pdf.lineHeight(self.pdf.font_size_pt)
+                self.pdf.set_font(size=self.pdf.linePt)
+                y += h
+                self.pdf.set_xy(xMargin, y)
+                for b in tables[t][r]:
+                    self.pdf.cell(tblCols[0], h, text=f'{b["Board"]+1}', align='C', border=1)
+                    self.pdf.cell(tblCols[1], h, text=f'{b["NS"]}', align='C', border=1)
+                    self.pdf.cell(tblCols[2], h, text=f'{b["EW"]}', align='C', border=1)
+                    for c in range(3,len(hdrs)):
+                        self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
+                    y += h
+                    self.pdf.set_xy(xMargin, y)
+                bIdx += 1
+                y = self.pdf.sectionDivider(4, bIdx, xMargin)
+        return
+
+    def Tables(self):
+        tables = {}
+        for b,r in self.boardData.items():
+            for v in r:
+                if v[1] not in tables:
+                    tables[v[1]] = {}
+                if v[0] not in tables[v[1]]:
+                    tables[v[1]][v[0]] = []
+                tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
+        hdrs = ['Round', 'NS', 'EW', 'Boards']
+        tblCols = []
+        xMargin = 0.5
+        self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        tblCols[3] = self.pdf.get_string_width('8'*8+','*3) + 0.25
+        w = sum(tblCols)
+        xMargin = (self.pdf.w - w) / 2
+
+        for t in sorted(tables.keys()):
+            self.pdf.add_page()
+            self.pdf.movementSheet()
+            self.pdf.compass()
+            self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
+            self.pdf.headerRow(xMargin, 2, tblCols, hdrs, f"Table {t+1}")
+            self.pdf.set_font(size=self.pdf.linePt)
+            y = self.pdf.get_y()
+            h = self.pdf.lineHeight(self.pdf.font_size_pt);
+            self.pdf.set_xy(xMargin, y + h)
+            for r in sorted(tables[t].keys()):
+                tRound = tables[t][r]
+                self.pdf.cell(tblCols[0], h, text=f'{r+1}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f'{tables[t][r][0]['NS']}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{tables[t][r][0]['EW']}', align='C', border=1)
+                bds = ""
+                for b in tRound:
+                    bds += f'{b['Board']+1},'
+                self.pdf.cell(tblCols[3], h, text=bds[:-1], align='C', border=1)
+                y += h
+                self.pdf.set_xy(xMargin, y + h)
+
+
+
+    def Travelers(self):
+        tblCols = []
+        xMargin = 0.5
+        hdrs = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        bIdx = 0
+        for b,r in self.boardData.items():
+            if bIdx % 4 == 0:
+                self.pdf.add_page()
+                self.pdf.headerFooter()
+                y = 0.5
+            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, f'Traveler for Board: {b+1}')
+            h = self.pdf.lineHeight(self.pdf.font_size_pt)
+            self.pdf.set_font(size=self.pdf.linePt)
+            for v in r:
+                y += h
+                self.pdf.set_xy(xMargin, y)
+                self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f'{v[2]}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{v[3]}', align='C', border=1)
+                for c in range(3,len(hdrs)):
+                    self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
+            bIdx += 1
+            y = self.pdf.sectionDivider(4, bIdx, xMargin)
         return
 
     def Journal(self):
+        pairData = {}
+        for b,r in self.boardData.items():
+            for v in r:
+                for p in range(2,4):
+                    if v[p] not in pairData:
+                        pairData[v[p]] = []
+                    pairData[v[p]].append((v[0], b, v[1], v[2], v[3])) # (round, board, table, NS, EW)
+        tblCols = []
+        xMargin = self.pdf.margin * 2
+        hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        self.pdf.set_xy(self.pdf.margin, self.pdf.margin)
+        for p in sorted(pairData.keys()):
+            self.pdf.add_page()
+            self.pdf.headerFooter()
+            y = self.pdf.headerRow(xMargin, self.pdf.margin, tblCols, hdrs ,f"Pair {p} Play Journal")
+            self.pdf.set_font(size=self.pdf.linePt)
+            h = self.pdf.lineHeight(self.pdf.font_size_pt)
+            y += h;
+            self.pdf.set_xy(xMargin, y)
+            for v in sorted(pairData[p], key=lambda x: x[0]):
+                self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f'{v[1]+1}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{v[3]}', align='C', border=1)
+                self.pdf.cell(tblCols[3], h, text=f'{v[4]}', align='C', border=1)
+                for c in range(4,len(hdrs)):
+                    self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
+                y += h
+                self.pdf.set_xy(xMargin, y)
         return
 
     def results(self):
@@ -273,20 +410,6 @@ class Mitchell(PairGames):
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
-
-    def headerFooter(self):
-        notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
-        self.pdf.set_font(size=self.pdf.tinyPt)
-        h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        w = self.pdf.get_string_width(notice)
-        x = self.pdf.setHCenter(w)
-        self.pdf.set_xy(x, h)
-        self.pdf.cell(text=notice)
-        w = self.pdf.get_string_width(self.footer)
-        x = self.pdf.setHCenter(w)
-        y = self.pdf.eph - h * 2
-        self.pdf.set_xy(x, y)
-        self.pdf.cell(text=self.footer)
 
 
 if __name__ == '__main__':
