@@ -150,8 +150,20 @@ class DupBridge:
 		vulShift = bidx // 4
 		return ['None', 'NS', 'EW', 'Both'][(bidx + vulShift) % 4]
 
+class PairGames(DupBridge):
+	def __init__(self, log):
+		super().__init__(log)
 
-class HowellDocSet(DupBridge):
+	def fakeScore(self, sh, row, col):
+		if random.random() < 0.90:
+			pickSide = col if random.random() >= 0.5 else col+1
+			score = random.randint(2,80)*10
+			sh.cell(row, pickSide).value = score
+		else:
+			sh.cell(row, col).value = 'Avg'
+			sh.cell(row, col+1).value = 'Avg'
+
+class HowellDocSet(PairGames):
 	def __init__(self, log, toFake=False):
 		super().__init__(log)
 		self.notice = 'For public domain. No rights reserved. Generated on'
@@ -251,13 +263,7 @@ class HowellDocSet(DupBridge):
 					sh.cell(row, 6).value = self.vulLookup(b-1)
 					sh.cell(row, 6).alignment = self.centerAlign
 					if self.fakeResult:
-						if random.random() < 0.90:
-							pickSide = 10 if random.random() >= 0.5 else 11
-							score = random.randint(2,80)*10
-							sh.cell(row, pickSide).value = score
-						else:
-							sh.cell(row, 10).value = 'Avg'
-							sh.cell(row, 11).value = 'Avg'
+						self.fakeScore(sh, row, 10)
 					row += 1
 				for c in range(2,12):
 					sh.cell(row, c).border = self.thinLine

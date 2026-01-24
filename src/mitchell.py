@@ -14,10 +14,10 @@ from maininit import setlog
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 import pdf
-from docset import DupBridge
+from docset import PairGames
 import datetime
 
-class Mitchell(DupBridge):
+class Mitchell(PairGames):
     def __init__(self, log, p, b, f):
         super().__init__(log)
         self.pairs = p
@@ -38,6 +38,7 @@ class Mitchell(DupBridge):
         self.roster()
         self.roundTab()
         self.boardTab()
+        self.results()
         self.ScoreTable()
         self.Pickups()
         self.Journal()
@@ -132,17 +133,22 @@ class Mitchell(DupBridge):
         headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
         sh, row = self.contractHeaders(headers, 'By Board', ['Scores','%', 'Pts', 'Net'], 1)
         calcs = ['NS', 'EW'] * 3
+        calcs.append('Calculations')
         col = len(headers) + 1
         for h in calcs:
             sh.cell(row-1, col).value = h
             sh.cell(row-1, col).font = self.HeaderFont
             sh.cell(row-1, col).alignment = self.centerAlign
             col += 1
+        for i in range(len(headers)+1, col+1):
+            sh.cell(row-1,i).font = self.noChangeFont
         rGap = self.tables * self.boards
         for b in self.boardData.keys():
             sh.cell(row, 1).value = b+1
             sh.cell(row, 1).alignment = self.centerAlign
+            cursorRow = 0
             for r in self.boardData[b]: # (round, table, NS, EW)
+                nPlayed = len(self.boardData[b])    # # of times this board was played
                 sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(r[0] * rGap + 3, 1)}"
                 tBase = r[0] * rGap + r[1] * self.boards + 3
                 sh.cell(row, 3).value = f"='By Round'!{self.rc2a1(tBase, 2)}"
@@ -151,15 +157,34 @@ class Mitchell(DupBridge):
                 cIdx = len(headers)
                 rawNS = self.rc2a1(row, cIdx - 1)
                 rawEW = self.rc2a1(row, cIdx)
-                sh.cell(row, cIdx+5).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
-                sh.cell(row, cIdx+6).value = f'=IF(ISNUMBER({rawEW}),{rawEW},IF(ISNUMBER({rawNS}),-{rawNS},""))'
                 tBase += b % self.boards
                 for i in range(6, len(headers)+1):
                     c = f"'By Round'!{self.rc2a1(tBase, i)}"
                     sh.cell(row, i).value = f'=IF(ISBLANK({c}),"",{c})'
                 for i in range(2,7):
                     sh.cell(row, i).alignment = self.centerAlign
+
+                # Computing MPs
+                sh.cell(row, cIdx+1).value = f"={self.rc2a1(row, cIdx+3)}/{nPlayed-1}"
+                sh.cell(row, cIdx+2).value = f"={self.rc2a1(row, cIdx+4)}/{nPlayed-1}"
+                sh.cell(row, cIdx+1).number_format = sh.cell(row, cIdx+2).number_format = "0.00%"
+                sh.cell(row, cIdx+3).value = f"=SUM({self.rc2a1(row, cIdx+7)}:{self.rc2a1(row,cIdx+5+nPlayed)})"
+                sh.cell(row, cIdx+4).value = f"=SUM({self.rc2a1(row, cIdx+6+nPlayed)}:{self.rc2a1(row,cIdx+4+2*nPlayed)})"
+                sh.cell(row, cIdx+3).number_format = sh.cell(row, cIdx+4).number_format = "#0.00"
+                sh.cell(row, cIdx+5).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
+                sh.cell(row, cIdx+6).value = f'=IF(ISNUMBER({rawEW}),{rawEW},IF(ISNUMBER({rawNS}),-{rawNS},""))'
+                opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
+                for i in range(2):
+                    n = nPlayed - 1
+                    for rCmp in range(n):
+                        cmpF = f"=IF(AND(ISNUMBER({self.rc2a1(row, cIdx+5+i)}),ISNUMBER({self.rc2a1(row+opponents[rCmp], cIdx+5+i)})),"
+                        cmpF += f"IF({self.rc2a1(row, cIdx+5+i)}>{self.rc2a1(row+opponents[rCmp], cIdx+5+i)},1,"
+                        cmpF += f"IF({self.rc2a1(row, cIdx+5+i)}={self.rc2a1(row+opponents[rCmp], cIdx+5+i)},0.5,0)),0.5)"
+                        targetC = cIdx+7+rCmp+i*n
+                        sh.cell(row, targetC).value = cmpF
+
                 row += 1
+                cursorRow += 1
         return
 
     def roundTab(self):
@@ -188,8 +213,7 @@ class Mitchell(DupBridge):
                     sh.cell(row, 5).alignment = self.centerAlign
                     sh.cell(row, 6).alignment = self.centerAlign
                     if self.fake:
-                        f += 1
-                        sh.cell(row, 10 if r < self.tables // 2 else 11).value = f
+                        self.fakeScore(sh, row, 10)
                     row += 1
         return
 
@@ -226,6 +250,20 @@ class Mitchell(DupBridge):
 
     def Journal(self):
         return
+
+    def results(self):
+        sh = self.wb['Roster']
+        nRows = 0
+        for b in self.boardData.values():
+            nRows += len(b)
+        for i in range(self.pairs):
+            ifRange = f"'By Board'!{self.rc2a1(3, 4+i%2)}:{self.rc2a1(3+nRows,4+i%2)}"
+            sumRange = f"'By Board'!{self.rc2a1(3, 12+i%2)}:{self.rc2a1(3+nRows,12+i%2)}"
+            ptsRange = f"'By Board'!{self.rc2a1(3, 12+i%2)}:{self.rc2a1(3+nRows,13+i%2)}"
+            sh.cell(4+i,4).value=f"=SUMIF({ifRange},\"={i+1}\",{sumRange})/{len(self.boardData)}"
+            sh.cell(4+i,5).value=f"=SUMIF({ifRange},\"={i+1}\",{ptsRange})"
+            sh.cell(4+i,4).number_format = "0.00%"
+            sh.cell(4+i,5).number_format = "#0.0"
 
     # Output into filesystem
     def save(self):
