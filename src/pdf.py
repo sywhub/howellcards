@@ -13,6 +13,7 @@ class PDF(FPDF):
     headerPt = 14
     linePt = 12
     notePt = 10
+    smallPt = 8
     tinyPt = 6
 
     def __init__(self):

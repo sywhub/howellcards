@@ -30,6 +30,7 @@ class Mitchell(PairGames):
         self.SITOUT = "Sit-Out"
         self.fake = f
         self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
+        self.bottomLine = Border(bottom=Side(style='thin', color='000000'))
         self.pdf = pdf.PDF()
         self.wb = Workbook()
 
@@ -192,6 +193,8 @@ class Mitchell(PairGames):
 
                 row += 1
                 cursorRow += 1
+            for c in range(len(headers)+len(calcs)+self.tables+1):
+                sh.cell(row-1, c+1).border = self.bottomLine
         return
 
     def roundTab(self):

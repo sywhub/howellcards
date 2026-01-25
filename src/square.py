@@ -68,6 +68,10 @@ class Square(Mitchell):
                         self.fakeScore(sh, row, 10)
                     self.boardData[i].append((r, t[0], t[1], t[2]))
                     row += 1
+                for c in range(len(headers) - 1):
+                    sh.cell(row-1, c+2).border = self.bottomLine
+            for c in range(len(headers)):
+                sh.cell(row-1, c+1).border = self.bottomLine
 
 
     def loadSetupSheet(self):
@@ -104,6 +108,7 @@ class Square(Mitchell):
                 idData[r['EW']].append((r['Round'], t, r['NS'], r['EW'], r['Board']))
         self.idTagsByData(idData)
 
+    # Data {pair #: [(round, table, NS, EW, [boards]), ...], ...}
     def idTagsByData(self, data):
         nTagsPage = len(data) if len(data) <= 4 else 4
         cHeight = self.pdf.eph / nTagsPage
@@ -115,7 +120,7 @@ class Square(Mitchell):
         self.pdf.setHeaders(leftMargin, hdrs, colW)
         for id in sorted(data.keys()):
             if tags % nTagsPage == 0:
-                self.pdf.add_page()
+                self.pdf.add_page() # no header/footer
                 x = leftMargin
                 y = self.pdf.margin
             rData = sorted(data[id], key=lambda x: x[0])
@@ -126,7 +131,7 @@ class Square(Mitchell):
                 h = self.pdf.lineHeight(self.pdf.font_size_pt)
                 ty = y + h
                 self.pdf.set_xy(leftMargin+cWidth*half, ty)
-                self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=8)
+                self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.smallPt)
                 h = self.pdf.lineHeight(self.pdf.font_size_pt)
                 for i in range(len(hdrs)):
                     self.pdf.cell(colW[i], h, text=hdrs[i], align='C', border=1)
