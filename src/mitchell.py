@@ -139,7 +139,7 @@ class Mitchell(PairGames):
         headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
         sh, row = self.contractHeaders(headers, 'By Board', ['Scores','%', 'Pts', 'Net'], 1)
         calcs = ['NS', 'EW'] * 3
-        calcs.append('Calculations')
+        calcs.append('Calculations Area')
         col = len(headers) + 1
         for h in calcs:
             sh.cell(row-1, col).value = h
@@ -148,6 +148,7 @@ class Mitchell(PairGames):
             col += 1
         for i in range(len(headers)+1, col+1):
             sh.cell(row-1,i).font = self.noChangeFont
+        sh.merge_cells(f"{self.rc2a1(row-1, col-1)}:{self.rc2a1(row-1,col+self.tables)}")
         rGap = self.tables * self.boards
         for b in self.boardData.keys():
             sh.cell(row, 1).value = b+1
