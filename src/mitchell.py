@@ -289,7 +289,7 @@ class Mitchell(PairGames):
                 y = self.pdf.sectionDivider(4, bIdx, xMargin)
         return
 
-    def Tables(self):
+    def Tables(self, sqMove=False):
         tables = {}
         for b,r in self.boardData.items():
             for v in r:
@@ -310,6 +310,8 @@ class Mitchell(PairGames):
             self.pdf.add_page()
             self.pdf.movementSheet()
             self.pdf.compass()
+            ewNext = f'Move to Table {t+2 if t < 3 else 1} EW' if not sqMove else ''
+            self.pdf.inkEdgeText('Stay Here', ewNext)
             self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
             self.pdf.headerRow(xMargin, 2, tblCols, hdrs, f"Table {t+1}")
             self.pdf.set_font(size=self.pdf.linePt)
@@ -422,7 +424,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
-    parser.add_argument('-b', '--boards', type=int, choices=range(2,7), default=4, help='Number of pairs')
+    parser.add_argument('-b', '--boards', type=int, choices=range(2,7), default=4, help='Boards per round')
     parser.add_argument('-p', '--pair', type=even_type, choices=range(7,25), default=8, help='Number of pairs')
     parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     args = parser.parse_args()

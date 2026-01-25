@@ -426,18 +426,20 @@ class PDF(FPDF):
 
     def moveInstruction(self, tbl, nextNS, nextEW):
         # movement instructions
+        if tbl == nextNS[0]:
+            nsText = 'Stationary Pair.  Just stay.'
+        else:
+            nsText = f'Next Round to Table {nextNS[0]+1} {nextNS[1].upper()}'
+        ewText = f'Next Round to Table {nextEW[0]+1} {nextEW[1].upper()}'
+        self.inkEdgeText(nsText, ewText)
+
+    def inkEdgeText(self, nsText, ewText):
         self.set_font(style='B', size=PDF.bigPt)
         edge = self.lineHeight(self.font_size_pt) * 2.5
-        if tbl == nextNS[0]:
-            nextStr = 'Stationary Pair.  Just stay.'
-        else:
-            nextStr = f'Next Round to Table {nextNS[0]+1} {nextNS[1].upper()}'
-        self.angleText(nextStr, 'N', edge)
-        self.angleText(nextStr, 'S', edge)
-
-        nextStr = f'Next Round to Table {nextEW[0]+1} {nextEW[1].upper()}'
-        self.angleText(nextStr, 'E', edge)
-        self.angleText(nextStr, 'W', edge)
+        self.angleText(nsText, 'N', edge)
+        self.angleText(nsText, 'S', edge)
+        self.angleText(ewText, 'E', edge)
+        self.angleText(ewText, 'W', edge)
 
     def movementSheet(self):
         saveFont = self.font_family
