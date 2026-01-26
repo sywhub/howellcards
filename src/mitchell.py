@@ -288,7 +288,7 @@ class Mitchell(PairGames):
                 tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
         tblCols = []
         xMargin = 0.5
-        hdrs = ['Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        hdrs = ['NS Score', 'Result', 'NS Contract', 'By', 'Board', 'EW Contract', 'By', 'Result', 'EW Socre']
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
         bIdx = 0
         for t in sorted(tables.keys()):
@@ -297,17 +297,19 @@ class Mitchell(PairGames):
                 self.pdf.headerFooter()
                 y = 0.5
             for r in sorted(tables[t].keys()):
-                y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, f"Pickup: Table {t+1}, Round {r+1}")
+                x = tables[t][r][0]
+                title = f"Table {t+1}, Round {r+1}, NS: {self.pairN(x["NS"])}, EW: {self.pairN(x["EW"])}"
+                y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, title)
                 h = self.pdf.lineHeight(self.pdf.font_size_pt)
                 self.pdf.set_font(size=self.pdf.linePt)
                 y += h
                 self.pdf.set_xy(xMargin, y)
                 for b in tables[t][r]:
-                    self.pdf.cell(tblCols[0], h, text=f'{b["Board"]+1}', align='C', border=1)
-                    self.pdf.cell(tblCols[1], h, text=f'{self.pairN(b["NS"])}', align='C', border=1)
-                    self.pdf.cell(tblCols[2], h, text=f'{self.pairN(b["EW"])}', align='C', border=1)
-                    for c in range(3,len(hdrs)):
-                        self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
+                    for i in range(4):
+                        self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
+                    self.pdf.cell(tblCols[4], h, text=f'{b["Board"]+1}', align='C', border=1)
+                    for i in range(5,len(hdrs)):
+                        self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
                     y += h
                     self.pdf.set_xy(xMargin, y)
                 bIdx += 1
@@ -335,10 +337,11 @@ class Mitchell(PairGames):
             self.pdf.add_page()
             self.pdf.movementSheet()
             self.pdf.compass()
+            self.pdf.tableAnchors(f"{t+1}")
             ewNext = f'Move to Table {t+2 if t < 3 else 1} EW' if not sqMove else ''
             self.pdf.inkEdgeText('Stay Here', ewNext)
             self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
-            self.pdf.headerRow(xMargin, 2, tblCols, hdrs, f"Table {t+1}")
+            self.pdf.headerRow(xMargin, 2, tblCols, hdrs, ' ')
             self.pdf.set_font(size=self.pdf.linePt)
             y = self.pdf.get_y()
             h = self.pdf.lineHeight(self.pdf.font_size_pt);
@@ -368,7 +371,7 @@ class Mitchell(PairGames):
                 self.pdf.add_page()
                 self.pdf.headerFooter()
                 y = 0.5
-            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, f'Traveler for Board: {b+1}')
+            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, f'Board {b+1} Traveler')
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
             self.pdf.set_font(size=self.pdf.linePt)
             for v in r:
@@ -392,14 +395,17 @@ class Mitchell(PairGames):
                         pairData[v[p]] = []
                     pairData[v[p]].append((v[0], b, v[1], v[2], v[3])) # (round, board, table, NS, EW)
         tblCols = []
+        nPerPage = 2 if len(pairData[1]) < 24 else 1
+        pIdx = 0
         xMargin = self.pdf.margin * 2
         hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
         for p in sorted(pairData.keys()):
-            self.pdf.add_page()
-            self.pdf.headerFooter()
-            self.pdf.set_xy(self.pdf.margin, self.pdf.margin*2)
-            y = self.pdf.headerRow(xMargin, self.pdf.margin, tblCols, hdrs ,f"Pair {self.pairID(p)} Play Journal")
+            if pIdx % nPerPage == 0:
+                self.pdf.add_page()
+                self.pdf.headerFooter()
+                y = self.pdf.margin*2
+            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs ,f"Pair {self.pairID(p)} Play Journal")
             self.pdf.set_font(size=self.pdf.linePt)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
             y += h;
@@ -413,6 +419,8 @@ class Mitchell(PairGames):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
                 y += h
                 self.pdf.set_xy(xMargin, y)
+            pIdx += 1
+            y = self.pdf.sectionDivider(nPerPage, pIdx, self.pdf.margin)
         return
 
     def results(self):

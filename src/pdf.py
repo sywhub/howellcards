@@ -184,6 +184,7 @@ class PDF(FPDF):
             self.movementSheet()
             self.compass()
             self.moveInstruction(t, v['nsNext'], v['ewNext'])
+            self.tableAnchors(f"{t+1}")
 
             tblHeight = self.lineHeight(PDF.titlePt) * 2 + self.lineHeight(PDF.headerPt)  + self.lineHeight(PDF.bigPt) * v['nRound']
             bottom = self.eph - self.lineHeight(PDF.bigPt) * 3.5 - PDF.starRadius
@@ -455,6 +456,30 @@ class PDF(FPDF):
         self.angleText('South', 'S', edge)
         self.set_font(saveFont)
 
+    def tableAnchors(self, t):
+        radius = 0.5
+        anchorFontSize = 72
+        self.set_font_size(anchorFontSize)
+        xOffset = self.get_string_width(t) / 2
+        yOffset = self.pt2in(anchorFontSize) / 2
+        for corner in range(4):
+            match corner:
+                case 0:
+                    x = radius + self.margin
+                    y = radius + self.margin
+                case 1:
+                    x = self.w - radius - self.margin
+                    y = radius + self.margin
+                case 2:
+                    x = radius + self.margin
+                    y = self.h - radius - self.margin * 2
+                case 3:
+                    x = self.w - radius - self.margin
+                    y = self.h - radius - self.margin * 2
+            # self.circle(x, y, radius, 'D')
+            self.set_xy(x-xOffset, y-yOffset)
+            self.cell(text=t)
+
     def angleText(self, txt, facing, edgeMargin):
         strW = self.get_string_width(txt)
         if strW <= 0:
@@ -486,12 +511,12 @@ class PDF(FPDF):
 
     def headerRow(self, leftMargin, y, cols, hdrs, title):
         self.set_xy(leftMargin, y)
-        self.set_font(style='B', size=PDF.headerPt)
+        self.set_font(self.serifFont, style='B', size=PDF.headerPt)
         h = self.lineHeight(self.font_size_pt)
         self.cell(text=title)
         y += h
         self.set_xy(leftMargin, y)
-        self.set_font(style='B', size=PDF.linePt)
+        self.set_font(self.sansSerifFont, style='B', size=PDF.linePt)
         h = self.lineHeight(self.font_size_pt)
         for i in range(len(hdrs)):
             self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
@@ -524,7 +549,7 @@ class PDF(FPDF):
                     self.add_page()
                     self.footer()
                     y = 0.5
-                y = self.headerRow(xMargin, y, tblCols, hdrs, f'Traveler for Board: {nDeck*i+d+1}')
+                y = self.headerRow(xMargin, y, tblCols, hdrs, f'Board {nDeck*i+d+1} Traveler')
                 h = self.lineHeight(self.font_size_pt)
                 self.set_font(size=PDF.linePt)
                 for x in [r for r in l if r[2] != 0]:

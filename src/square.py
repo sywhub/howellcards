@@ -128,10 +128,12 @@ class Square(Mitchell):
         colW = []
         hdrs = ['Round', 'Table', 'NS', 'EW']
         self.pdf.setHeaders(leftMargin, hdrs, colW)
+        tableW = sum(colW)
+        leftMargin = (self.pdf.w - 2 * tableW) / 4
         for id in sorted(data.keys()):
             if tags % nTagsPage == 0:
                 self.pdf.add_page() # no header/footer
-                y = self.pdf.margin
+                y = self.pdf.margin * 2
             rData = sorted(data[id], key=lambda x: x[0])
             for half in range(2):   # two identical tags for each person of the pair
                 self.pdf.set_font(self.pdf.serifFont, size=self.pdf.headerPt)
@@ -154,8 +156,8 @@ class Square(Mitchell):
                             txt = f"{self.pairN(r[i])}"
                         self.pdf.cell(colW[i], h, text=txt, align='C', border=1)
                     ty += h
-            y += cHeight
             tags += 1
+            y = self.pdf.sectionDivider(4, tags, self.pdf.margin) + self.pdf.margin * 2
         return
            
     # Output into filesystem
