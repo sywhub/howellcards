@@ -29,7 +29,6 @@ class Mitchell(PairGames):
         self.oddPairs = self.pairs % 2 == 1
         self.SITOUT = "Sit-Out"
         self.fake = f
-        self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
         self.bottomLine = Border(bottom=Side(style='thin', color='000000'))
         self.pdf = pdf.PDF()
         self.wb = Workbook()
@@ -38,6 +37,16 @@ class Mitchell(PairGames):
         footer = f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.boards} Boards per round'
         self.pdf.HeaderFooterText(notice, footer)
     
+    # turn pair number to readable ID
+    def pairSide(self, n):
+        return ['NS', 'EW'][1-(n % 2)]
+
+    def pairN(self, n):
+        return n // 2 if n % 2 == 0 else n // 2 + 1
+
+    def pairID(self, n):
+        return f"{self.pairSide(n)} {self.pairN(n)}"
+
     def go(self):
         # the sequence of calls is important
         self.roster()
@@ -78,12 +87,18 @@ class Mitchell(PairGames):
         ws.cell(row, 5).font = self.HeaderFont
         ws.cell(row, 5).alignment = self.centerAlign
         row += 1
-        for p in range(self.pairs):
+        for side in ['NS', 'EW']:
+            for p in range(self.pairs // 2):
+                ws.cell(row, 1).font = self.HeaderFont
+                ws.cell(row, 1).value = f'{side} {p+1}'
+                ws.cell(row, 2).value = self.placeHolderName()
+                ws.cell(row, 3).value = self.placeHolderName()
+            row += 1
+        if self.oddPairs:
             ws.cell(row, 1).font = self.HeaderFont
-            ws.cell(row, 1).value = f'Pair {p+1}'
+            ws.cell(row, 1).value = f'EW {self.pairs // 2 +1}'
             ws.cell(row, 2).value = self.placeHolderName()
             ws.cell(row, 3).value = self.placeHolderName()
-            row += 1
         ws.column_dimensions['B'].width = 30
         ws.column_dimensions['C'].width = 30
         
@@ -103,12 +118,18 @@ class Mitchell(PairGames):
         self.pdf.set_xy(leftM, y)
         self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.bigPt) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        for p in range(self.pairs):
-            self.pdf.cell(widths[0], h, text=f'Pair {p+1}', align='C', border=1)
+        for side in ['NS', 'EW']:
+            for p in range(self.pairs // 2):
+                self.pdf.cell(widths[0], h, text=f'{side} {p+1}', align='C', border=1)
+                self.pdf.cell(widths[1], h, text='', align='C', border=1)
+                self.pdf.cell(widths[2], h, text='', align='C', border=1)
+                y += h
+                self.pdf.set_xy(leftM, y)
+        if self.oddPairs:
+            self.pdf.cell(widths[0], h, text=f'EW {self.pairs // 2 +1}', align='C', border=1)
             self.pdf.cell(widths[1], h, text='', align='C', border=1)
             self.pdf.cell(widths[2], h, text='', align='C', border=1)
             y += h
-            self.pdf.set_xy(leftM, y)
         return
 
     def meta(self):
@@ -283,8 +304,8 @@ class Mitchell(PairGames):
                 self.pdf.set_xy(xMargin, y)
                 for b in tables[t][r]:
                     self.pdf.cell(tblCols[0], h, text=f'{b["Board"]+1}', align='C', border=1)
-                    self.pdf.cell(tblCols[1], h, text=f'{b["NS"]}', align='C', border=1)
-                    self.pdf.cell(tblCols[2], h, text=f'{b["EW"]}', align='C', border=1)
+                    self.pdf.cell(tblCols[1], h, text=f'{self.pairN(b["NS"])}', align='C', border=1)
+                    self.pdf.cell(tblCols[2], h, text=f'{self.pairN(b["EW"])}', align='C', border=1)
                     for c in range(3,len(hdrs)):
                         self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
                     y += h
@@ -325,8 +346,8 @@ class Mitchell(PairGames):
             for r in sorted(tables[t].keys()):
                 tRound = tables[t][r]
                 self.pdf.cell(tblCols[0], h, text=f'{r+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{tables[t][r][0]['NS']}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{tables[t][r][0]['EW']}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(tables[t][r][0]['NS'])}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(tables[t][r][0]['EW'])}', align='C', border=1)
                 bds = ""
                 for b in tRound:
                     bds += f'{b['Board']+1},'
@@ -354,8 +375,8 @@ class Mitchell(PairGames):
                 y += h
                 self.pdf.set_xy(xMargin, y)
                 self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{v[2]}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{v[3]}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[2])}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
                 for c in range(3,len(hdrs)):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
             bIdx += 1
@@ -374,11 +395,11 @@ class Mitchell(PairGames):
         xMargin = self.pdf.margin * 2
         hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        self.pdf.set_xy(self.pdf.margin, self.pdf.margin)
         for p in sorted(pairData.keys()):
             self.pdf.add_page()
             self.pdf.headerFooter()
-            y = self.pdf.headerRow(xMargin, self.pdf.margin, tblCols, hdrs ,f"Pair {p} Play Journal")
+            self.pdf.set_xy(self.pdf.margin, self.pdf.margin*2)
+            y = self.pdf.headerRow(xMargin, self.pdf.margin, tblCols, hdrs ,f"Pair {self.pairID(p)} Play Journal")
             self.pdf.set_font(size=self.pdf.linePt)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
             y += h;
@@ -386,8 +407,8 @@ class Mitchell(PairGames):
             for v in sorted(pairData[p], key=lambda x: x[0]):
                 self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
                 self.pdf.cell(tblCols[1], h, text=f'{v[1]+1}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{v[3]}', align='C', border=1)
-                self.pdf.cell(tblCols[3], h, text=f'{v[4]}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
+                self.pdf.cell(tblCols[3], h, text=f'{self.pairN(v[4])}', align='C', border=1)
                 for c in range(4,len(hdrs)):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
                 y += h
