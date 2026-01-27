@@ -84,8 +84,8 @@ class Square(Mitchell):
             # Each "board set" is n boards, as dedicated by command line argument
             0: [{'Round': 0, 'NS': 1, 'EW': 1, 'Board': 0},   # round, NS, EW, boardSet #
                 {'Round': 1, 'NS': 1, 'EW': 2, 'Board': 3},
-                {'Round': 2, 'NS': 1, 'EW': 3, 'Board': 2},
-                {'Round': 3, 'NS': 1, 'EW': 4, 'Board': 1},],
+                {'Round': 2, 'NS': 1, 'EW': 4, 'Board': 2},
+                {'Round': 3, 'NS': 1, 'EW': 3, 'Board': 1},],
             1: [{'Round': 0, 'NS': 2, 'EW': 2, 'Board': 1},
                 {'Round': 1, 'NS': 2, 'EW': 1, 'Board': 2},
                 {'Round': 2, 'NS': 2, 'EW': 3, 'Board': 3},

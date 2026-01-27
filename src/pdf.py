@@ -7,6 +7,7 @@ class PDF(FPDF):
     margin = 0.25
     thinLine = 1/72/2   # half a point
     starRadius = 1
+    anchorFontSize = 72
     rosterPt = 20
     titlePt = 18
     bigPt = 16
@@ -457,28 +458,31 @@ class PDF(FPDF):
         self.set_font(saveFont)
 
     def tableAnchors(self, t):
-        radius = 0.5
-        anchorFontSize = 72
-        self.set_font_size(anchorFontSize)
-        xOffset = self.get_string_width(t) / 2
-        yOffset = self.pt2in(anchorFontSize) / 2
+        self.set_font_size(self.anchorFontSize)
+        xOffset = self.get_string_width(t)
+        yOffset = self.pt2in(self.anchorFontSize) / 2
         for corner in range(4):
             match corner:
                 case 0:
-                    x = radius + self.margin
-                    y = radius + self.margin
+                    x = xOffset + self.margin
+                    y = self.margin
+                    rot = 0
                 case 1:
-                    x = self.w - radius - self.margin
-                    y = radius + self.margin
+                    x = self.w - xOffset - self.margin
+                    y = self.margin
+                    rot = 0
                 case 2:
-                    x = radius + self.margin
-                    y = self.h - radius - self.margin * 2
+                    x = xOffset + self.margin + xOffset
+                    y = self.h - yOffset * 2 - self.margin
+                    rot = 180
                 case 3:
-                    x = self.w - radius - self.margin
-                    y = self.h - radius - self.margin * 2
+                    x = self.w - xOffset - self.margin
+                    y = self.h - yOffset * 2 - self.margin
+                    rot = 180
             # self.circle(x, y, radius, 'D')
-            self.set_xy(x-xOffset, y-yOffset)
-            self.cell(text=t)
+            self.set_xy(x, y)
+            with self.rotation(angle=rot):
+                self.cell(text=t)
 
     def angleText(self, txt, facing, edgeMargin):
         strW = self.get_string_width(txt)
@@ -501,8 +505,9 @@ class PDF(FPDF):
         with self.rotation(angle=rot):
             self.cell(text=txt)
 
+    # compute the width of each column
+    # use whatever font active
     def setHeaders(self, leftMargin, hdrs, cols):
-        self.set_font(size=PDF.linePt)
         for i in range(len(hdrs)):
             cols.append(self.get_string_width(hdrs[i]) + 0.2)
         allW = sum(cols)
@@ -511,12 +516,11 @@ class PDF(FPDF):
 
     def headerRow(self, leftMargin, y, cols, hdrs, title):
         self.set_xy(leftMargin, y)
-        self.set_font(self.serifFont, style='B', size=PDF.headerPt)
         h = self.lineHeight(self.font_size_pt)
         self.cell(text=title)
         y += h
         self.set_xy(leftMargin, y)
-        self.set_font(self.sansSerifFont, style='B', size=PDF.linePt)
+        self.set_font(self.sansSerifFont, style='B')
         h = self.lineHeight(self.font_size_pt)
         for i in range(len(hdrs)):
             self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
