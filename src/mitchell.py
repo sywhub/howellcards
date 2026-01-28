@@ -53,6 +53,7 @@ class Mitchell(PairGames):
 
     def go(self):
         # the sequence of calls is important
+        self.initData()
         self.roster()
         self.roundTab() # build data structure for late
         self.boardTab()
@@ -64,6 +65,19 @@ class Mitchell(PairGames):
         self.Journal()  # PDF only
         self.save()
         return
+
+	# {Rounds: 4, Tables: 3, BoardMovement: null, Arrangement:
+    #      [[{NS: 0, EW: 1, Board: 0}, {NS: 3, EW: 4, Board: 1}, {NS: 5, EW: 2, Board: 3}],
+    #       [...], ...]
+    def initData(self):
+        self.boardData = {}
+        for r in range(self.tables): # round
+            for t in range(self.tables): # table
+                b = self.boardIdx(r, t)
+                for bset in range(self.boards):
+                    if (b + bset) not in self.boardData:
+                        self.boardData[b+bset] = []
+                    self.boardData[b+bset].append((r, t, self.NSPair(r, t), self.EWPair(r, t)))
 
     def roster(self):
         self.rosterSheet()
@@ -106,7 +120,7 @@ class Mitchell(PairGames):
                 row += 1
             for i in range(5):
                 ws.cell(row-1, i+1).border = self.bottomLine
-            ws.cell(row,3).value = 'Average'
+            ws.cell(row, 3).value = 'Average'
             ws.cell(row, 4).value = f'=AVERAGE({self.rc2a1(avgStart, 4)}:{self.rc2a1(row-1,4)})'
             ws.cell(row, 5).value = f'=AVERAGE({self.rc2a1(avgStart, 5)}:{self.rc2a1(row-1,5)})'
             ws.cell(row,4).number_format = "0.00%"
@@ -232,38 +246,44 @@ class Mitchell(PairGames):
 
                 row += 1
                 cursorRow += 1
-            for c in range(len(headers)+len(calcs)+self.tables+1):
+            for c in range(len(headers)+len(calcs)+self.tables+2):
                 sh.cell(row-1, c+1).border = self.bottomLine
         return
 
     def roundTab(self):
         self.log.debug('Saving by Round')
+        self.roundData = {}
+        for b,bset in self.boardData.items():
+            for s in bset:
+                if s[0] not in self.roundData:   # round
+                    self.roundData[s[0]] = {}
+                if s[1] not in self.roundData[s[0]]: # table
+                    self.roundData[s[0]][s[1]] = {'NS': s[2], 'EW': s[3], 'Board': []}
+                self.roundData[s[0]][s[1]]['Board'].append(b)
+
         headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
-        sh, row = self.contractHeaders(headers, 'By Round', ['Scores'])
-        rounds = self.tables
-        self.boardData = {}
-        f = 0
-        for r in range(rounds): # round
+        sh, startRow = self.contractHeaders(headers, 'By Round', ['Scores'])
+        row = startRow
+        for r in sorted(self.roundData.keys()): # round
             sh.cell(row, 1).value = r+1
             sh.cell(row, 1).alignment = self.centerAlign
-            for t in range(rounds): # table
+            for t in sorted(self.roundData[r]): # table
                 sh.cell(row, 2).value = t+1
-                sh.cell(row, 3).value = self.pairN(self.NSPair(r, t))
-                sh.cell(row, 4).value = self.pairN(self.EWPair(r, t))
-                for i in range(2,5):
-                    sh.cell(row, i).alignment = self.centerAlign
-                b = self.boardIdx(r, t)
-                for bset in range(self.boards):
-                    if (b + bset) not in self.boardData:
-                        self.boardData[b+bset] = []
-                    sh.cell(row, 5).value = b+bset+1
-                    self.boardData[b+bset].append((r, t, self.NSPair(r, t), self.EWPair(r, t)))
-                    sh.cell(row, 6).value = f"{self.vulLookup(b+bset)}"
-                    sh.cell(row, 5).alignment = self.centerAlign
-                    sh.cell(row, 6).alignment = self.centerAlign
-                    if self.fake and self.pairN(self.NSPair(r, t)) != self.SITOUT:
-                            self.fakeScore(sh, row, 10)
+                sh.cell(row, 3).value = self.pairN(self.roundData[r][t]['NS'])
+                sh.cell(row, 4).value = self.pairN(self.roundData[r][t]['EW'])
+                for b in self.roundData[r][t]['Board']:
+                    sh.cell(row, 5).value = b+1
+                    sh.cell(row, 6).value = f"{self.vulLookup(b)}"
+                    for i in range(2,7):
+                        sh.cell(row, i).alignment = self.centerAlign
                     row += 1
+                for i in range(2,len(headers)+1):
+                    sh.cell(row-1, i).border = self.bottomLine
+            sh.cell(row-1,1).border = self.bottomLine
+        if self.fake:
+            for i in range(startRow, row):
+                self.fakeScore(sh, i, headers.index('Result')+2)
+                
         return
 
     def NSPair(self, r, t):
@@ -481,6 +501,8 @@ class Mitchell(PairGames):
         sh = self.wb['Roster']
         nRows = 0
         row = 4
+        divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
+
         for b in self.boardData.values():
             nRows += len(b)
         for s in range(2):
@@ -492,7 +514,7 @@ class Mitchell(PairGames):
                 ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+nRows,4+s)}"
                 sumRange = f"'By Board'!{self.rc2a1(3, 12+s)}:{self.rc2a1(3+nRows,12+s)}"
                 ptsRange = f"'By Board'!{self.rc2a1(3, 14+s)}:{self.rc2a1(3+nRows,14+s)}"
-                sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{len(self.boardData)}"
+                sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divident}"
                 sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{ptsRange})"
                 sh.cell(row,4).number_format = "0.00%"
                 sh.cell(row,5).number_format = "#0.0"
@@ -511,16 +533,16 @@ class Mitchell(PairGames):
 
 if __name__ == '__main__':
     log = setlog('mitchell', None)
-    def even_type(value):
+    def mitchell_check(value):
         ivalue = int(value)
-        if ivalue % 2 != 0:
-            raise argparse.ArgumentTypeError(f"{value} is not an even number")
+        if ivalue == 16:
+            raise argparse.ArgumentTypeError(f"Cannot have even number of tables")
         return ivalue
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
-    parser.add_argument('-b', '--boards', type=int, choices=range(2,7), default=4, help='Boards per round')
-    parser.add_argument('-p', '--pair', type=int, choices=range(5,25), default=8, help='Number of pairs')
+    parser.add_argument('-b', '--boards', type=int, choices=range(1,7), default=4, help='Boards per round')
+    parser.add_argument('-p', '--pair', type=mitchell_check, choices=range(8,24), default=8, help='Number of pairs')
     parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
