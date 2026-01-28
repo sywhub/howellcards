@@ -80,23 +80,42 @@ class Mitchell(PairGames):
         ws.cell(row, 1).alignment = self.centerAlign
         row += 2
         
-        ws.cell(row, 1).value = 'Players'
-        ws.cell(row, 1).font = self.HeaderFont
-        ws.cell(row, 1).alignment = self.centerAlign
-        ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
-        ws.cell(row, 4).value = '%'
-        ws.cell(row, 4).font = self.HeaderFont
-        ws.cell(row, 4).alignment = self.centerAlign
-        ws.cell(row, 5).value = 'Score'
-        ws.cell(row, 5).font = self.HeaderFont
-        ws.cell(row, 5).alignment = self.centerAlign
-        row += 1
-        for p in range(self.pairs):
+        for s in range(2):
+            ws.cell(row, 1).value =  f'{['NS', 'EW'][s]} Pairs'
             ws.cell(row, 1).font = self.HeaderFont
-            ws.cell(row, 1).value = f'{self.pairID(p+1)}'
-            ws.cell(row, 2).value = self.placeHolderName()
-            ws.cell(row, 3).value = self.placeHolderName()
+            ws.cell(row, 1).alignment = self.centerAlign
+            ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
+            ws.cell(row, 4).value = '%'
+            ws.cell(row, 4).font = self.HeaderFont
+            ws.cell(row, 4).alignment = self.centerAlign
+            ws.cell(row, 5).value = 'Score'
+            ws.cell(row, 5).font = self.HeaderFont
+            ws.cell(row, 5).alignment = self.centerAlign
             row += 1
+            toN = self.pairs + (1 if self.oddPairs else 0)
+            avgStart = row
+            for p in range(s, toN, 2):
+                pName = self.pairN(p+1)
+                if pName == self.SITOUT:
+                    continue
+                ws.cell(row, 1).font = self.HeaderFont
+                ws.cell(row, 1).alignment = self.centerAlign
+                ws.cell(row, 1).value = pName
+                ws.cell(row, 2).value = self.placeHolderName()
+                ws.cell(row, 3).value = self.placeHolderName()
+                row += 1
+            for i in range(5):
+                ws.cell(row-1, i+1).border = self.bottomLine
+            ws.cell(row,3).value = 'Average'
+            ws.cell(row, 4).value = f'=AVERAGE({self.rc2a1(avgStart, 4)}:{self.rc2a1(row-1,4)})'
+            ws.cell(row, 5).value = f'=AVERAGE({self.rc2a1(avgStart, 5)}:{self.rc2a1(row-1,5)})'
+            ws.cell(row,4).number_format = "0.00%"
+            ws.cell(row,5).number_format = "#0.0"
+            ws.cell(row,3).font = self.noChangeFont
+            ws.cell(row,4).font = self.noChangeFont
+            ws.cell(row,5).font = self.noChangeFont
+            row += 2
+        row += 2
         ws.column_dimensions['B'].width = 30
         ws.column_dimensions['C'].width = 30
         
@@ -122,7 +141,7 @@ class Mitchell(PairGames):
             self.pdf.set_font(style='')
             y += h
             self.pdf.set_xy(leftM, y)
-            toN = self.pairs + 1 if self.oddPairs else 0
+            toN = self.pairs + (1 if self.oddPairs else 0)
             for p in range(s, toN, 2):
                 self.pdf.cell(widths[0], h, text=f'{self.pairN(p+1)}', align='C', border=1)
                 self.pdf.cell(widths[1], h, text='', align='C', border=1)
@@ -229,8 +248,8 @@ class Mitchell(PairGames):
             sh.cell(row, 1).alignment = self.centerAlign
             for t in range(rounds): # table
                 sh.cell(row, 2).value = t+1
-                sh.cell(row, 3).value = self.NSPair(r, t)
-                sh.cell(row, 4).value = self.EWPair(r, t)
+                sh.cell(row, 3).value = self.pairN(self.NSPair(r, t))
+                sh.cell(row, 4).value = self.pairN(self.EWPair(r, t))
                 for i in range(2,5):
                     sh.cell(row, i).alignment = self.centerAlign
                 b = self.boardIdx(r, t)
@@ -242,14 +261,12 @@ class Mitchell(PairGames):
                     sh.cell(row, 6).value = f"{self.vulLookup(b+bset)}"
                     sh.cell(row, 5).alignment = self.centerAlign
                     sh.cell(row, 6).alignment = self.centerAlign
-                    if self.fake:
-                        self.fakeScore(sh, row, 10)
+                    if self.fake and self.pairN(self.NSPair(r, t)) != self.SITOUT:
+                            self.fakeScore(sh, row, 10)
                     row += 1
         return
 
     def NSPair(self, r, t):
-        if t == self.tables and self.oddPairs:
-            return self.SITOUT
         return t * 2 + 1
 
     def EWPair(self, r, t):
@@ -296,12 +313,12 @@ class Mitchell(PairGames):
         tblCols[5] += extraW
         bIdx = 0
         for t in sorted(tables.keys()):
+            if self.oddPairs and t == len(tables.keys()) - 1:
+                continue
             for r in sorted(tables[t].keys()):
                 if bIdx % 4 == 0:
                     self.pdf.add_page()
                     y = 2 * self.pdf.margin
-                if self.oddPairs and t == len(tables.keys()) - 1:
-                    continue
                 x = tables[t][r][0]
                 self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
                 title = f"Table {t+1}, Round {r+1}, NS: {self.pairN(x["NS"])}, EW: {self.pairN(x["EW"])}"
@@ -406,7 +423,10 @@ class Mitchell(PairGames):
             for v in r:
                 self.pdf.set_xy(xMargin, y)
                 self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[2])}', align='C', border=1)
+                if type(v[2]) == str:
+                    self.pdf.cell(tblCols[1], h, text=v[2], align='C', border=1)
+                else:
+                    self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[2])}', align='C', border=1)
                 self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
                 for c in range(3,len(hdrs)):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
@@ -460,16 +480,24 @@ class Mitchell(PairGames):
     def results(self):
         sh = self.wb['Roster']
         nRows = 0
+        row = 4
         for b in self.boardData.values():
             nRows += len(b)
-        for i in range(self.pairs):
-            ifRange = f"'By Board'!{self.rc2a1(3, 4+i%2)}:{self.rc2a1(3+nRows,4+i%2)}"
-            sumRange = f"'By Board'!{self.rc2a1(3, 12+i%2)}:{self.rc2a1(3+nRows,12+i%2)}"
-            ptsRange = f"'By Board'!{self.rc2a1(3, 12+i%2)}:{self.rc2a1(3+nRows,13+i%2)}"
-            sh.cell(4+i,4).value=f"=SUMIF({ifRange},\"={i+1}\",{sumRange})/{len(self.boardData)}"
-            sh.cell(4+i,5).value=f"=SUMIF({ifRange},\"={i+1}\",{ptsRange})"
-            sh.cell(4+i,4).number_format = "0.00%"
-            sh.cell(4+i,5).number_format = "#0.0"
+        for s in range(2):
+            toN = self.pairs + (1 if self.oddPairs else 0)
+            for p in range(s, toN, 2):
+                pName = self.pairN(p+1)
+                if pName == self.SITOUT:
+                    continue
+                ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+nRows,4+s)}"
+                sumRange = f"'By Board'!{self.rc2a1(3, 12+s)}:{self.rc2a1(3+nRows,12+s)}"
+                ptsRange = f"'By Board'!{self.rc2a1(3, 14+s)}:{self.rc2a1(3+nRows,14+s)}"
+                sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{len(self.boardData)}"
+                sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{ptsRange})"
+                sh.cell(row,4).number_format = "0.00%"
+                sh.cell(row,5).number_format = "#0.0"
+                row += 1
+            row += 3
 
     # Output into filesystem
     def save(self):
