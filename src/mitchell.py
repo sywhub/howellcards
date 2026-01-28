@@ -27,7 +27,6 @@ class Mitchell(PairGames):
         if self.tables % 2 == 0:
             self.boardSet += 1
         self.oddPairs = self.pairs % 2 == 1
-        self.SITOUT = "Sit-Out"
         self.fake = f
         self.bottomLine = Border(bottom=Side(style='thin', color='000000'))
         self.pdf = pdf.PDF()
@@ -36,7 +35,7 @@ class Mitchell(PairGames):
         notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
         footer = f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.boards} Boards per round'
         self.pdf.HeaderFooterText(notice, footer)
-    
+
     # turn pair number to readable ID
     def pairSide(self, n):
         return ['EW', 'NS'][n % 2]
@@ -51,6 +50,19 @@ class Mitchell(PairGames):
             return self.SITOUT
         return f"{self.pairSide(n)} {self.pairN(n)}"
 
+    def NSPair(self, r, t):
+        return t * 2 + 1
+
+    def EWPair(self, r, t):
+        ew = self.tables - (self.tables - t + r - 1) % self.tables
+        ew *= 2
+        return ew
+    
+    def boardIdx(self, r, t):
+        b = (r + t) % self.boardSet
+        b *= self.boards
+        return b
+
     def go(self):
         # the sequence of calls is important
         self.initData()
@@ -59,6 +71,7 @@ class Mitchell(PairGames):
         self.boardTab()
         self.results()
         self.ScoreTable()
+        self.idTags()
         self.Pickups()  # PDF only
         self.Tables()
         self.Travelers()  # PDF only
@@ -66,18 +79,28 @@ class Mitchell(PairGames):
         self.save()
         return
 
-	# {Rounds: 4, Tables: 3, BoardMovement: null, Arrangement:
-    #      [[{NS: 0, EW: 1, Board: 0}, {NS: 3, EW: 4, Board: 1}, {NS: 5, EW: 2, Board: 3}],
-    #       [...], ...]
     def initData(self):
         self.boardData = {}
-        for r in range(self.tables): # round
-            for t in range(self.tables): # table
-                b = self.boardIdx(r, t)
-                for bset in range(self.boards):
-                    if (b + bset) not in self.boardData:
-                        self.boardData[b+bset] = []
-                    self.boardData[b+bset].append((r, t, self.NSPair(r, t), self.EWPair(r, t)))
+        if self.pairs == 8:
+            self.loadSquare()   # squaure Mitchell
+        else:   # standard Mitchell
+            for r in range(self.tables): # round
+                for t in range(self.tables): # table
+                    b = self.boardIdx(r, t)
+                    for bset in range(self.boards):
+                        if (b + bset) not in self.boardData:
+                            self.boardData[b+bset] = []
+                        self.boardData[b+bset].append((r, t, self.NSPair(r, t), self.EWPair(r, t)))
+
+        # A convenient restructure
+        self.roundData = {}
+        for b,bset in self.boardData.items():
+            for s in bset:
+                if s[0] not in self.roundData:   # round
+                    self.roundData[s[0]] = {}
+                if s[1] not in self.roundData[s[0]]: # table
+                    self.roundData[s[0]][s[1]] = {'NS': s[2], 'EW': s[3], 'Board': []}
+                self.roundData[s[0]][s[1]]['Board'].append(b)
 
     def roster(self):
         self.rosterSheet()
@@ -193,7 +216,7 @@ class Mitchell(PairGames):
         headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
         sh, row = self.contractHeaders(headers, 'By Board', ['Scores','%', 'Pts', 'Net'], 1)
         calcs = ['NS', 'EW'] * 3
-        calcs.append('Calculations Area')
+        calcs.append('Calculation Area')
         col = len(headers) + 1
         for h in calcs:
             sh.cell(row-1, col).value = h
@@ -203,7 +226,7 @@ class Mitchell(PairGames):
         for i in range(len(headers)+1, col+1):
             sh.cell(row-1,i).font = self.noChangeFont
         sh.merge_cells(f"{self.rc2a1(row-1, col-1)}:{self.rc2a1(row-1,col+self.tables)}")
-        rGap = self.tables * self.boards
+        rGap = self.tables * self.boards    # Number of rows between each round
         for b in self.boardData.keys():
             sh.cell(row, 1).value = b+1
             sh.cell(row, 1).alignment = self.centerAlign
@@ -252,14 +275,6 @@ class Mitchell(PairGames):
 
     def roundTab(self):
         self.log.debug('Saving by Round')
-        self.roundData = {}
-        for b,bset in self.boardData.items():
-            for s in bset:
-                if s[0] not in self.roundData:   # round
-                    self.roundData[s[0]] = {}
-                if s[1] not in self.roundData[s[0]]: # table
-                    self.roundData[s[0]][s[1]] = {'NS': s[2], 'EW': s[3], 'Board': []}
-                self.roundData[s[0]][s[1]]['Board'].append(b)
 
         headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
         sh, startRow = self.contractHeaders(headers, 'By Round', ['Scores'])
@@ -285,19 +300,6 @@ class Mitchell(PairGames):
                 self.fakeScore(sh, i, headers.index('Result')+2)
                 
         return
-
-    def NSPair(self, r, t):
-        return t * 2 + 1
-
-    def EWPair(self, r, t):
-        ew = self.tables - (self.tables - t + r - 1) % self.tables
-        ew *= 2
-        return ew
-    
-    def boardIdx(self, r, t):
-        b = (r + t) % self.boardSet
-        b *= self.boards
-        return b
 
     def contractHeaders(self, hdrs, tabName, merges, tabIdx=2):
         sh = self.wb.create_sheet(tabName, tabIdx)
@@ -361,8 +363,9 @@ class Mitchell(PairGames):
                 y = self.pdf.sectionDivider(4, bIdx, xMargin)
         return
 
-    def Tables(self, sqMove=False):
+    def Tables(self):
         tables = {}
+        sqMove = self.pairs == 8
         for b,r in self.boardData.items():
             for v in r:
                 if v[1] not in tables:
@@ -419,7 +422,59 @@ class Mitchell(PairGames):
                 y += h
                 self.pdf.set_xy(xMargin, y + h)
 
+    def idTags(self):
+        idData = {}
+        for rd, tbl in self.roundData.items(): # (round, table, NS, EW)
+            for t, r in tbl.items():
+                if r['NS'] not in idData:
+                    idData[r['NS']] = []
+                if r['EW'] not in idData:
+                    idData[r['EW']] = []
+                idData[r['NS']].append((rd, t, r['NS'], r['EW']))
+                idData[r['EW']].append((rd, t, r['NS'], r['EW']))
+        self.idTagsByData(idData)
+    
+    # A page holds 4 sets of "id tags", one for each person of each pair
+    def idTagsByData(self, data):
+        nTagsPage = len(data) if len(data) <= 4 else 4
+        cHeight = self.pdf.eph / nTagsPage
+        cWidth = self.pdf.w / 2
+        leftMargin = self.pdf.margin * 2
+        tags = 0
+        colW = []
+        hdrs = ['Round', 'Table', 'vs']
+        self.pdf.setHeaders(leftMargin, hdrs, colW)
+        tableW = sum(colW)
+        leftMargin = (self.pdf.w - 2 * tableW) / 4
+        for id in sorted(data.keys()):
+            if tags % nTagsPage == 0:
+                self.pdf.add_page() # no header/footer
+                y = self.pdf.margin * 2
+            rData = sorted(data[id], key=lambda x: x[0])
+            for half in range(2):   # two identical tags for each person of the pair
+                self.pdf.set_font(self.pdf.serifFont, size=self.pdf.headerPt)
+                self.pdf.set_xy(leftMargin+cWidth*half, y)
+                side = self.pairSide(id)
+                self.pdf.cell(text=f"Pair: {self.pairID(id)}")
+                h = self.pdf.lineHeight(self.pdf.font_size_pt)
+                ty = y + h
+                self.pdf.set_xy(leftMargin+cWidth*half, ty)
+                self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.smallPt)
+                h = self.pdf.lineHeight(self.pdf.font_size_pt)
+                for i in range(len(hdrs)):
+                    self.pdf.cell(colW[i], h, text=hdrs[i], align='C', border=1)
+                ty +=  h
+                for r in rData:
+                    self.pdf.set_xy(leftMargin+cWidth*half, ty)
+                    self.pdf.cell(colW[0], h, text=f"{r[0]+1}", align='C', border=1)
+                    self.pdf.cell(colW[1], h, text=f"{r[1]+1}", align='C', border=1)
+                    self.pdf.cell(colW[2], h, text=f"{self.pairN(r[3] if side == 'NS' else r[2])}", align='C', border=1)
+                    ty += h
+            tags += 1
+            y = self.pdf.sectionDivider(4, tags, self.pdf.margin) + self.pdf.margin * 2
+        return
 
+    # Data {pair #: [(round, table, NS, EW), ...], ...}
 
     def Travelers(self):
         tblCols = []
@@ -455,6 +510,38 @@ class Mitchell(PairGames):
             if nPerPage > 1:
                 y = self.pdf.sectionDivider(nPerPage, bIdx, xMargin)
         return
+
+    def loadSquare(self):
+        self.sqSetup = {
+            # Primary key is the table number
+            # Pair numbering in this data is separated by NS/EW
+            # Each "board set" is n boards, as dedicated by command line argument
+            0: [{'Round': 0, 'NS': 1, 'EW': 1, 'Board': 0},   # round, NS, EW, boardSet #
+                {'Round': 1, 'NS': 1, 'EW': 2, 'Board': 3},
+                {'Round': 2, 'NS': 1, 'EW': 4, 'Board': 2},
+                {'Round': 3, 'NS': 1, 'EW': 3, 'Board': 1},],
+            1: [{'Round': 0, 'NS': 2, 'EW': 2, 'Board': 1},
+                {'Round': 1, 'NS': 2, 'EW': 1, 'Board': 2},
+                {'Round': 2, 'NS': 2, 'EW': 3, 'Board': 3},
+                {'Round': 3, 'NS': 2, 'EW': 4, 'Board': 0},],
+            2: [{'Round': 0, 'NS': 3, 'EW': 3, 'Board': 2},
+                {'Round': 1, 'NS': 3, 'EW': 4, 'Board': 1},
+                {'Round': 2, 'NS': 3, 'EW': 2, 'Board': 0},
+                {'Round': 3, 'NS': 3, 'EW': 1, 'Board': 3},],
+            3: [{'Round': 0, 'NS': 4, 'EW': 4, 'Board': 3},
+                {'Round': 1, 'NS': 4, 'EW': 3, 'Board': 0},
+                {'Round': 2, 'NS': 4, 'EW': 1, 'Board': 1},
+                {'Round': 3, 'NS': 4, 'EW': 2, 'Board': 2}]}
+        self.boardData = {}
+        for t,tbl in self.sqSetup.items():
+            for r in tbl:
+                r['Board'] = [r['Board']*self.boards + x for x in range(self.boards)]
+                r['NS'] = (r['NS'] - 1) * 2 + 1
+                r['EW'] *= 2
+                for b in r['Board']:
+                    if b not in self.boardData:
+                        self.boardData[b] = []
+                    self.boardData[b].append((r['Round'], t, r['NS'], r['EW']))
 
     def Journal(self):
         pairData = {}
