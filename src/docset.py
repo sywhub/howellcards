@@ -16,6 +16,7 @@ class DupBridge:
         self.centerAlign = Alignment(horizontal='center')
         self.trumps = ('D/C', 'H/S', 'NT')  
         self.thinLine = Border(top=Side(style='thin', color="000000"))
+        self.fake = False
 
     # IMP conversion table
     def IMPTable(self):
@@ -167,7 +168,14 @@ class PairGames(DupBridge):
     def __init__(self, log):
         super().__init__(log)
         self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
+        self.bottomLine = Border(bottom=Side(style='thin', color='000000'))
         self.SITOUT = "Sit-Out"
+
+    def pairN(self, n):
+        return n + 1
+
+    def pairID(self, n):
+        return f"{n+1}"
 
     def fakeScore(self, sh, row, col):
         if random.random() < 0.90:
@@ -178,3 +186,103 @@ class PairGames(DupBridge):
             sh.cell(row, col).value = 'Avg'
             sh.cell(row, col+1).value = 'Avg'
 
+    def initRounds(self):
+        # A convenient restructure
+        self.roundData = {}
+        for b,bset in self.boardData.items():
+            for s in bset:
+                if s[0] not in self.roundData:   # round
+                    self.roundData[s[0]] = {}
+                if s[1] not in self.roundData[s[0]]: # table
+                    self.roundData[s[0]][s[1]] = {'NS': s[2], 'EW': s[3], 'Board': []}
+                self.roundData[s[0]][s[1]]['Board'].append(b)
+
+    def roundTab(self):
+        self.log.debug('Saving by Round')
+        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
+        sh, startRow = self.contractHeaders(headers, 'By Round', ['Scores'])
+        row = startRow
+        for r in sorted(self.roundData.keys()): # round
+            sh.cell(row, 1).value = r+1
+            sh.cell(row, 1).alignment = self.centerAlign
+            for t in sorted(self.roundData[r]): # table
+                sh.cell(row, 2).value = t+1
+                sh.cell(row, 3).value = self.pairN(self.roundData[r][t]['NS'])
+                sh.cell(row, 4).value = self.pairN(self.roundData[r][t]['EW'])
+                for b in self.roundData[r][t]['Board']:
+                    sh.cell(row, 5).value = b+1
+                    sh.cell(row, 6).value = f"{self.vulLookup(b)}"
+                    for i in range(2,7):
+                        sh.cell(row, i).alignment = self.centerAlign
+                    row += 1
+                for i in range(2,len(headers)+1):
+                    sh.cell(row-1, i).border = self.bottomLine
+            sh.cell(row-1,1).border = self.bottomLine
+        if self.fake:
+            for i in range(startRow, row):
+                self.fakeScore(sh, i, headers.index('Result')+2)
+        return
+
+    def contractHeaders(self, hdrs, tabName, merges, tabIdx=2):
+        sh = self.wb.create_sheet(tabName, tabIdx)
+        sCol = hdrs.index('Result')+2
+        for i in range(len(merges)):
+            sh.cell(1, sCol).value = merges[i]
+            sh.merge_cells(f'{self.rc2a1(1, sCol)}:{self.rc2a1(1, sCol+1)}')
+            sh.cell(1, sCol).font = self.HeaderFont
+            sh.cell(1, sCol).alignment = self.centerAlign
+            sCol += 2
+        row = self.headerRow(sh, hdrs, 2)
+        sh.column_dimensions[chr(hdrs.index('Contract')+ord('A'))].width = 30
+        return sh, row
+
+    def Pickups(self):
+        # rearrange by tables
+        tables = {}
+        for b,r in self.boardData.items():
+            for v in r:
+                if v[1] not in tables:
+                    tables[v[1]] = {}
+                if v[0] not in tables[v[1]]:
+                    tables[v[1]][v[0]] = []
+                tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
+        tblCols = []
+        xMargin = self.pdf.margin
+        hdrs = ['NS Score', 'Result', 'NS Contract', 'By', 'Board', 'EW Contract', 'By', 'Result', 'EW Socre']
+        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
+        self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        allW = sum(tblCols)
+        extraW = (self.pdf.epw - allW) / 2
+        tblCols[2] += extraW
+        tblCols[5] += extraW
+        bIdx = 0
+        for t in sorted(tables.keys()):
+            if (hasattr(self, 'oddPairs') and self.oddPairs and t == len(tables.keys()) - 1):
+                continue
+            for r in sorted(tables[t].keys()):
+                x = tables[t][r][0]
+                if self.pairN(x['NS']) == 0:
+                    continue
+                if bIdx % 4 == 0:
+                    self.pdf.add_page()
+                    y = 2 * self.pdf.margin
+                self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
+                title = f"Table {t+1}, Round {r+1}, NS: {self.pairN(x["NS"])}, EW: {self.pairN(x["EW"])}"
+                y += self.pdf.lineHeight(self.pdf.font_size_pt)
+                self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
+                y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, title)
+                self.pdf.set_font(size=self.pdf.linePt)
+                h = self.pdf.lineHeight(self.pdf.font_size_pt)
+                y += h
+                self.pdf.set_xy(xMargin, y)
+                for b in tables[t][r]:
+                    for i in range(4):
+                        self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
+                    self.pdf.cell(tblCols[4], h, text=f'{b["Board"]+1}', align='C', border=1)
+                    for i in range(5,len(hdrs)):
+                        self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
+                    y += h
+                    self.pdf.set_xy(xMargin, y)
+                bIdx += 1
+                y = self.pdf.sectionDivider(4, bIdx, xMargin)
+        return

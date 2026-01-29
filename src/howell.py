@@ -22,13 +22,16 @@ from maininit import setlog
 from docset import PairGames
 
 class Howell(PairGames):
-    def __init__(self, log, toFake=False):
+    def __init__(self, log, toFake, pairs, tourney):
         super().__init__(log)
         self.notice = 'For public domain. No rights reserved. Generated on'
-        self.fakeResult = toFake
+        self.fake = toFake
         self.pdf = pdf.PDF()
         self.wb = Workbook()
         self.here = os.path.dirname(os.path.abspath(__file__))
+        self.pairs = pairs
+        self.tourneyData = tourney
+        self.init()
         return
 
     def save(self):
@@ -37,6 +40,9 @@ class Howell(PairGames):
         self.ScoreTable()
         self.wb.save(f'{self.here}/../howell{self.pairs}.xlsx')
         self.pdf.output(f'{self.here}/../howell{self.pairs}.pdf')
+
+    def pairN(self, n):
+        return n
 
     def boardList(self, bIdx):
         return [self.decks*bIdx+x+1 for x in range(self.decks)]
@@ -54,16 +60,25 @@ class Howell(PairGames):
     # probably should be part of the constructor
     # Initialize some state.
     # Create meta and roster sheets
-    def init(self, pairs, nRound):
-        self.pairs = pairs
-        if pairs <= 6:
+    def init(self):
+        if self.pairs <= 6:
             self.decks = 3
         else:
             self.decks = 2
+        self.boardData = {}
+        for r in range(len(self.tourneyData['Arrangement'])):
+            for t in range(len(self.tourneyData['Arrangement'][r])):
+                tbl = self.tourneyData['Arrangement'][r][t]
+                for b in self.boardList(tbl['Board']):
+                    if b not in self.boardData:
+                        self.boardData[b] = []
+                    self.boardData[b].append((r, t, tbl['NS'], tbl['EW']))
+        self.initRounds()
+        nRound = self.tourneyData['Rounds']
 
         # meta data
         tourneyMeta = [['Howell Arrangement (IMP & MP)'],
-            ['Pairs',pairs], ['Tables',int((pairs + (pairs % 2))/ 2)],
+            ['Pairs', self.pairs], ['Tables',int((self.pairs + (self.pairs % 2))/ 2)],
             ['Rounds',nRound], ['Boards per round',self.decks], ['Total Boards to play', self.decks*nRound]]
 
         ws = self.wb.active
@@ -81,57 +96,15 @@ class Howell(PairGames):
         ws.column_dimensions['A'].width = 30
 
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
-            f'Howell Movement for {pairs} Pairs')
+            f'Howell Movement for {self.pairs} Pairs')
         self.pdf.meta(self.log, ws.title, tourneyMeta)
         self.pdf.instructions(self.log, "instructions.txt")
         self.rosterSheet()
 
-
-    # A sheet to present the round-oriented data
-    # This is the "native" view from data structure's point of view
-    # A "round" is keyed by its number (zero based)
-    # The value part is a "Table"
-    # A table is also (zero) keyed as the table number
-    # Its value is another dictionary of "ns", "ew", and "board"
-    # which are the pair IDs and the board "set" to be play for that table at that round
-    def saveByRound(self, rounds):
-        self.log.debug('Saving by Round')
-        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.log.debug('Saving by Round')
-        sh = self.wb.create_sheet('By Round')
-        sCol = headers.index('Result')+2
-        sh.cell(1, sCol).value = 'Scores'
-        sh.merge_cells(f'{self.rc2a1(1, sCol)}:{self.rc2a1(1, sCol+1)}')
-        sh.cell(1, sCol).font = self.HeaderFont
-        sh.cell(1, sCol).alignment = self.centerAlign
-        row = self.headerRow(sh, headers, 2)
-        sh.column_dimensions[chr(headers.index('Contract')+ord('A'))].width = 30
-        sh.column_dimensions['H'].width = 15
-        sh.column_dimensions['I'].width = 15
-        for rIdx, r in enumerate(rounds):
-            sh.cell(row, 1).value = rIdx+1
-            for tIdx, tbl in enumerate(r):
-                sh.cell(row, 2).value = tIdx+1
-                if tbl['NS'] == 0:
-                    sh.cell(row, 3).value = "Sit-Out"
-                else:
-                    sh.cell(row, 3).value = tbl['NS']
-                sh.cell(row, 4).value = tbl['EW']
-                for b in self.boardList(tbl['Board']):
-                    sh.cell(row, 5).value = b
-                    sh.cell(row, 6).value = self.vulLookup(b-1)
-                    sh.cell(row, 6).alignment = self.centerAlign
-                    if self.fakeResult:
-                        self.fakeScore(sh, row, 10)
-                    row += 1
-                for c in range(2,12):
-                    sh.cell(row, c).border = self.thinLine
-            for c in range(1,12):
-                sh.cell(row, c).border = self.thinLine
-
     # Present the same data table-oriented
-    def saveByTable(self, rounds):
+    def saveByTable(self):
         self.log.debug('Saving by Table')
+        rounds = self.tourneyData['Arrangement']
         nTbl = len(rounds[0])
         nRounds = len(rounds)
         # tbl#: {'nRound': # of rounds, r: ({'NS': ns, 'EW': ew, 'Board': board set #}, "boards set")}
@@ -155,14 +128,15 @@ class Howell(PairGames):
         self.pdf.overview(pdfData)
         self.pdf.tableOut(pdfData)
         self.pdf.idTags(pdfData)
-        self.pdf.pickupSlips(pdfData, self.decks)
+        self.Pickups()
         self.pdf.pairRecords(pdfData, self.decks)
 
     # Board-oriented view
     # A "board" is really a set of decks in the code.  The number of decks is in
     # "self.decks".  We make it 3 for 6-pair tournaments and 2 otherwise.
     # In this "by board" sheet, we also do the scoring.
-    def saveByBoard(self, rounds):
+    def saveByBoard(self):
+        rounds = self.tourneyData['Arrangement']
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 2)    # insert it as the 2nd sheet
         nTbl = len(rounds[0])
@@ -312,10 +286,6 @@ class Howell(PairGames):
         IMPRow = self.pairs + row + 2
         sh.cell(IMPRow, 1).value = 'Array Formula below, remove single quote'
         IMPRow += 1
-        #arrayRange = f'{self.rc2a1(IMPRow,1)}:{self.rc2a1(IMPRow+self.pairs-1,5)}'
-        #formulaTxt = f"=SORT({self.rc2a1(row+1, 1)}:{self.rc2a1(row+self.pairs-1,5)},4,-1)"
-        #sh[self.rc2a1(IMPRow,1)] = ArrayFormula(arrayRange, formulaTxt)
-        sh.cell(IMPRow,1).value = f"'=SORT({self.rc2a1(row, 1)}:{self.rc2a1(row+self.pairs-1,5)},4,-1)"
         for i in range(self.pairs):
             sh.cell(IMPRow+i,4).number_format = "#0.00"
             sh.cell(IMPRow+i,5).number_format = "0.00%"
@@ -358,16 +328,19 @@ class Howell(PairGames):
         for c in range(len(headers)):
             sh.column_dimensions[chr(ord('A')+c)].width = colWidthTbl[c]
 
+    def go(self):
+        #self.saveByRound()
+        self.roundTab()
+        self.saveByTable()
+        self.saveByBoard()
+        self.save()
+
 def howellFromJson(log, pairs, fake, jsonfile):
     jIO = jsonIO.JsonIO(pairs, log)
     tourney = jIO.load(jsonfile)
     if tourney:
-        doc = Howell(log, fake)
-        doc.init(pairs, tourney['Rounds'])
-        doc.saveByRound(tourney['Arrangement'])
-        doc.saveByTable(tourney['Arrangement'])
-        doc.saveByBoard(tourney['Arrangement'])
-        doc.save()
+        doc = Howell(log, fake, pairs, tourney)
+        doc.go()
 
 if __name__ == '__main__':
     log = setlog('howell', None)

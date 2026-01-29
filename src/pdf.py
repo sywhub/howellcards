@@ -283,36 +283,6 @@ class PDF(FPDF):
                     outtxt = f'{moveInstruction}\nSubsequent rounds follow the movement sheet on the table.'
                     self.multi_cell(w=cWidth, h=self.lineHeight(self.font_size_pt), text=outtxt, align='L')
 
-    # pickup slip: one sheet per table per round
-    def pickupSlips(self, pdfData, nPerSet):
-        tblCols = []
-        xMargin = 0.5
-        hdrs = ['Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.setHeaders(xMargin, hdrs, tblCols)
-        bIdx = 0
-        for tbl in sorted([a for a in pdfData.keys()]):
-            for r in range(pdfData[tbl]['nRound']):
-                if bIdx % 4 == 0:
-                    self.add_page()
-                    self.footer()
-                    y = 0.5
-                y = self.headerRow(xMargin, y, tblCols, hdrs, f"Pickup: Table {tbl+1}, Round {r+1}")
-                h = self.lineHeight(self.font_size_pt)
-                self.set_font(size=PDF.linePt)
-                y += h
-                self.set_xy(xMargin, y)
-                tblRound = pdfData[tbl][r][0]
-                for b in range(nPerSet):
-                    self.cell(tblCols[0], h, text=f"{tblRound['Board']*nPerSet+b+1}", align='C', border=1)
-                    self.cell(tblCols[1], h, text=f"{tblRound['NS']}", align='C', border=1)
-                    self.cell(tblCols[2], h, text=f"{tblRound['EW']}", align='C', border=1)
-                    for c in range(3,len(hdrs)):
-                        self.cell(tblCols[c], h, text='', align='C', border=1)
-                    y += h
-                    self.set_xy(xMargin, y)
-                bIdx += 1
-                y = self.sectionDivider(4, bIdx, xMargin)
-        return
 
     # Record sheet for each pair
     def pairRecords(self, pdfData, nPerSet):
