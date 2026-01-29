@@ -220,7 +220,7 @@ class Howell(PairGames):
 
                 # There are steps to calculate IMP for each board
                 # Here are two columns for the end result
-                nCmps = len(r) - 1
+                nCmps = len(boards[0]) - 1
                 avgRange = f'{sh.cell(row, pairWiseCol).coordinate}:{sh.cell(row, pairWiseCol+nCmps-1).coordinate}'
                 sh.cell(row, 12).value = f'=IFERROR(AVERAGE({avgRange}),"")'
                 sh.cell(row, 12).number_format = '#0.00'
