@@ -44,15 +44,21 @@ class Howell(PairGames):
     def pairN(self, n):
         return n
 
+    def pairID(self, n):
+        return f"{n if n != 0 else self.SITOUT}"
+
     def boardList(self, bIdx):
-        return [self.decks*bIdx+x+1 for x in range(self.decks)]
+        return [self.decks*bIdx+x for x in range(self.decks)]
+    
+    def ifSitout(self, t, ns, ew):
+        return ns == 0
 
     # string to enumerate a "board set" into individual decks
     def boardSet(self, bIdx):
         bds = self.boardList(bIdx)
         str = ''
         for i in bds:
-            str += f'{i}'
+            str += f'{i+1}'
             if i != bds[-1]:
                 str += ' & '
         return str
@@ -129,7 +135,7 @@ class Howell(PairGames):
         self.pdf.tableOut(pdfData)
         self.pdf.idTags(pdfData)
         self.Pickups()
-        self.pdf.pairRecords(pdfData, self.decks)
+        self.Journal()
 
     # Board-oriented view
     # A "board" is really a set of decks in the code.  The number of decks is in
@@ -168,7 +174,7 @@ class Howell(PairGames):
                         boards[b] = []
                     boards[b].append((r, tbl, p['NS'], p['EW']))
 
-        self.pdf.travelers(self.log, self.decks, boards)
+        self.Travelers()
 
         # each iteration advanceds by a set of boards, governed by self.decks
         for b in sorted(boards.keys()): # b is a set of self.decks

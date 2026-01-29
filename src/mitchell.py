@@ -62,6 +62,10 @@ class Mitchell(PairGames):
         b *= self.boards
         return b
 
+    def ifSitout(self, t, ns, ew):
+        return self.oddPairs and t == self.tables - 1
+
+
     def go(self):
         # the sequence of calls is important
         self.initData()
@@ -72,7 +76,7 @@ class Mitchell(PairGames):
         self.ScoreTable()
         self.idTags()
         self.Pickups()  # PDF only
-        self.Tables()
+        self.setTableTexts()
         self.Travelers()  # PDF only
         self.Journal()  # PDF only
         self.save()
@@ -263,64 +267,23 @@ class Mitchell(PairGames):
                 sh.cell(row-1, c+1).border = self.bottomLine
         return
 
-    def Tables(self):
-        tables = {}
-        sqMove = self.pairs == 8
-        for b,r in self.boardData.items():
-            for v in r:
-                if v[1] not in tables:
-                    tables[v[1]] = {}
-                if v[0] not in tables[v[1]]:
-                    tables[v[1]][v[0]] = []
-                tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
-        hdrs = ['Round', 'NS', 'EW', 'Boards']
-        tblCols = []
-        xMargin = 0.5
-        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.rosterPt)
-        self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        tblCols[3] = self.pdf.get_string_width('8'*self.boards*2+','*(self.boards-1)) + 0.25
-        w = sum(tblCols)
-        xMargin = (self.pdf.w - w) / 2
-
-        for t in sorted(tables.keys()):
-            if self.oddPairs and t == len(tables.keys()) - 1:
-                continue
-            self.pdf.add_page()
-            self.pdf.movementSheet()
-            self.pdf.compass()
-            self.pdf.tableAnchors(f"{t+1}")
-            if sqMove:
-                sqTxt = ['R2 to T2/EW, R3 to T3/EW, R4 to T2/EW',
-                         'R2 to T1/EW, R3 to T4/EW, R4 to T1/EW',
-                         'R2 to T4/EW, R3 to T1/EW, R4 to T4/EW',
-                         'R2 to T3/EW, R3 to T2/EW, R4 to T3/EW']
-                bdTxt = ['Stay here. Boards: R2 to T4, R3 to T2, R4 to T4',
-                         'Stay here. Boards: R2 to T3, R3 to T1, R4 to T3', 
-                         'Stay here. Boards: R2 to T2, R3 to T4, R4 to T2', 
-                         'Stay here. Boards: R2 to T1, R3 to T3, R4 to T1'] 
-                ewNext = sqTxt[t]
-                nsNext = bdTxt[t]
-            else:
-                ewNext = f'Move to Table {t+2 if t < 3 else 1} EW'
-                nsNext = f'Stay Here, Boards to T{t if t > 0 else 4}'
-            self.pdf.inkEdgeText(nsNext, ewNext)
-            self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.rosterPt)
-            self.pdf.headerRow(xMargin, 2, tblCols, hdrs, ' ')
-            self.pdf.set_font(size=self.pdf.rosterPt)
-            y = self.pdf.get_y()
-            h = self.pdf.lineHeight(self.pdf.font_size_pt);
-            self.pdf.set_xy(xMargin, y + h)
-            for r in sorted(tables[t].keys()):
-                tRound = tables[t][r]
-                self.pdf.cell(tblCols[0], h, text=f'{r+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(tables[t][r][0]['NS'])}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(tables[t][r][0]['EW'])}', align='C', border=1)
-                bds = ""
-                for b in tRound:
-                    bds += f'{b['Board']+1},'
-                self.pdf.cell(tblCols[3], h, text=bds[:-1], align='C', border=1)
-                y += h
-                self.pdf.set_xy(xMargin, y + h)
+    def setTableTexts(self):
+        if self.pairs != 8:
+            nsText = []
+            ewText = []
+            for t in range(self.tables):
+                ewText.append(f'Move to Table {t+2 if t < 3 else 1} EW')
+                nsText.append(f'Stay Here, Boards to T{t if t > 0 else 4}')
+        else:
+            nsText = ['R2 to T2/EW, R3 to T3/EW, R4 to T2/EW',
+                        'R2 to T1/EW, R3 to T4/EW, R4 to T1/EW',
+                        'R2 to T4/EW, R3 to T1/EW, R4 to T4/EW',
+                        'R2 to T3/EW, R3 to T2/EW, R4 to T3/EW']
+            ewText = ['Stay here. Boards: R2 to T4, R3 to T2, R4 to T4',
+                        'Stay here. Boards: R2 to T3, R3 to T1, R4 to T3', 
+                        'Stay here. Boards: R2 to T2, R3 to T4, R4 to T2', 
+                        'Stay here. Boards: R2 to T1, R3 to T3, R4 to T1'] 
+        self.Tables(nsText, ewText)
 
     def idTags(self):
         idData = {}
@@ -374,43 +337,6 @@ class Mitchell(PairGames):
             y = self.pdf.sectionDivider(4, tags, self.pdf.margin) + self.pdf.margin * 2
         return
 
-    # Data {pair #: [(round, table, NS, EW), ...], ...}
-
-    def Travelers(self):
-        tblCols = []
-        xMargin = 0.5
-        hdrs = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-        self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        if self.oddPairs:
-            tblCols[1] = self.pdf.get_string_width(self.SITOUT)+0.25
-        nPerPage = 4 if len(self.boardData[0]) <= 5 else 2 if len(self.boardData[0]) <= 12 else 1
-        bIdx = 0
-        for b,r in self.boardData.items():
-            if bIdx % nPerPage == 0:
-                self.pdf.add_page()
-                y = 0.5
-            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, f'Board {b+1} Traveler')
-            y += self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.linePt)
-            h = self.pdf.lineHeight(self.pdf.font_size_pt)
-            for v in r:
-                self.pdf.set_xy(xMargin, y)
-                self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
-                if type(v[2]) == str:
-                    self.pdf.cell(tblCols[1], h, text=v[2], align='C', border=1)
-                else:
-                    self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[2])}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
-                for c in range(3,len(hdrs)):
-                    self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
-                y += h
-            bIdx += 1
-            if nPerPage > 1:
-                y = self.pdf.sectionDivider(nPerPage, bIdx, xMargin)
-        return
-
     def loadSquare(self):
         self.sqSetup = {
             # Primary key is the table number
@@ -442,47 +368,6 @@ class Mitchell(PairGames):
                     if b not in self.boardData:
                         self.boardData[b] = []
                     self.boardData[b].append((r['Round'], t, r['NS'], r['EW']))
-
-    def Journal(self):
-        pairData = {}
-        for b,r in self.boardData.items():
-            for v in r:
-                for p in range(2,4):
-                    if v[p] not in pairData:
-                        pairData[v[p]] = []
-                    pairData[v[p]].append((v[0], b, v[1], v[2], v[3])) # (round, board, table, NS, EW)
-        tblCols = []
-        nPerPage = 2 if len(pairData[1]) < 24 else 1
-        pIdx = 0
-        xMargin = self.pdf.margin * 2
-        hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-        self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        for p in sorted(pairData.keys()):
-            if self.pairN(p) == self.SITOUT:
-                continue
-            if pIdx % nPerPage == 0:
-                self.pdf.add_page()
-                self.pdf.headerFooter()
-                y = self.pdf.margin*2
-            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs ,f"Pair {self.pairID(p)} Play Journal")
-            y += self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_font(size=self.pdf.linePt)
-            h = self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_xy(xMargin, y)
-            for v in sorted(pairData[p], key=lambda x: x[0]):
-                self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{v[1]+1}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
-                self.pdf.cell(tblCols[3], h, text=f'{self.pairN(v[4])}', align='C', border=1)
-                for c in range(4,len(hdrs)):
-                    self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
-                y += h
-                self.pdf.set_xy(xMargin, y)
-            pIdx += 1
-            y = self.pdf.sectionDivider(nPerPage, pIdx, self.pdf.margin)
-        return
 
     def results(self):
         sh = self.wb['Roster']

@@ -284,42 +284,6 @@ class PDF(FPDF):
                     self.multi_cell(w=cWidth, h=self.lineHeight(self.font_size_pt), text=outtxt, align='L')
 
 
-    # Record sheet for each pair
-    def pairRecords(self, pdfData, nPerSet):
-        pairs = {}
-        for tbl,rData in pdfData.items():
-            for r in range(rData['nRound']):
-                    if rData[r][0]['NS'] not in pairs:
-                        pairs[rData[r][0]['NS']] = []
-                    if rData[r][0]['EW'] not in pairs:
-                        pairs[rData[r][0]['EW']] = []
-                    pairs[rData[r][0]['NS']].append((r, rData[r][0]['NS'], rData[r][0]['EW'], rData[r][0]['Board']))
-                    pairs[rData[r][0]['EW']].append((r, rData[r][0]['NS'], rData[r][0]['EW'], rData[r][0]['Board']))
-        tblCols = []
-        xMargin = PDF.margin * 2
-        hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.setHeaders(xMargin, hdrs, tblCols)
-        for p in sorted(pairs.keys()):
-            self.add_page()
-            self.footer()
-            y = self.headerRow(xMargin, self.margin, tblCols, hdrs ,f"Pair {p} Play Journal")
-            h = self.lineHeight(self.font_size_pt)
-            y += h
-            self.set_xy(xMargin, y)
-            self.set_font(size=PDF.linePt)
-            for r in sorted(pairs[p],key=lambda x: x[0]):
-                for b in range(nPerSet):
-                    self.cell(tblCols[0], h, text=f'{r[0]+1}', align='C', border=1)
-                    self.cell(tblCols[1], h, text=f'{r[3]*nPerSet+b+1}', align='C', border=1)
-                    self.cell(tblCols[2], h, text=f'{r[1]}', align='C', border=1)
-                    self.cell(tblCols[3], h, text=f'{r[2]}', align='C', border=1)
-                    for c in range(4,len(hdrs)):
-                        self.cell(tblCols[c], h, text='', align='C', border=1)
-                    y += h
-                    self.set_xy(xMargin, y)
-
-        return
-
     def tableRoundHeaders(self):
         line = self.get_y() + self.lineHeight(self.font_size_pt) 
         self.set_font(style='B', size=PDF.headerPt)
@@ -508,36 +472,6 @@ class PDF(FPDF):
         self.line(x1=leftMargin, y1=y, x2=self.w - leftMargin, y2=y)
         self.set_dash_pattern()
         return y + h
-
-    # boards : {board #: [(r, tbl, ns, ew), ...]] 
-    def travelers(self, log, nDeck, boards):
-        tblCols = []
-        xMargin = 0.5
-        hdrs = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        self.setHeaders(xMargin, hdrs, tblCols)
-        bIdx = 0
-        for i in range(len(boards)):
-            l = sorted(boards[i], key=lambda x: x[0])
-            for d in range(nDeck):
-                if bIdx % 4 == 0:
-                    self.add_page()
-                    self.footer()
-                    y = 0.5
-                y = self.headerRow(xMargin, y, tblCols, hdrs, f'Board {nDeck*i+d+1} Traveler')
-                h = self.lineHeight(self.font_size_pt)
-                self.set_font(size=PDF.linePt)
-                for x in [r for r in l if r[2] != 0]:
-                    y += h
-                    self.set_xy(xMargin, y)
-                    self.cell(tblCols[0], h, text=f'{x[0]+1}', align='C', border=1)
-                    self.cell(tblCols[1], h, text=f'{x[2]}', align='C', border=1)
-                    self.cell(tblCols[2], h, text=f'{x[3]}', align='C', border=1)
-                    for c in range(3,len(hdrs)):
-                        self.cell(tblCols[c], h, text='', align='C', border=1)
-                bIdx += 1
-                y = self.sectionDivider(4, bIdx, xMargin)
-
-        return
 
 def experimentPDF(pdf):
     pdf.line(0, pdf.h / 2, pdf.w, pdf.h / 2)
