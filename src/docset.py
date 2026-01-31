@@ -437,7 +437,7 @@ class PairGames(DupBridge):
         leftMargin = (w - 2 * sum(colW)) / 4
         cWidth = w / 2
 
-        nTagsPage = 4 if len(data) <= 8 else 2
+        nTagsPage = 1 if len(data[1]) > 15 else (4 if len(data[1]) <= 8 else 2)
         for id in sorted(data.keys()):
             if self.pairID(id) == self.SITOUT:
                 continue

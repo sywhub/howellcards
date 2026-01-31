@@ -249,8 +249,10 @@ class Mitchell(PairGames):
                     sh.cell(row, i).alignment = self.centerAlign
 
                 # Computing MPs
-                sh.cell(row, cIdx+1).value = f"={self.rc2a1(row, cIdx+3)}/{nPlayed-1}"
-                sh.cell(row, cIdx+2).value = f"={self.rc2a1(row, cIdx+4)}/{nPlayed-1}"
+                countF=f"COUNT({self.rc2a1(row, cIdx+7)}:{self.rc2a1(row,cIdx+5+nPlayed)})"
+                sh.cell(row, cIdx+1).value = f"=IF({countF}>0,{self.rc2a1(row, cIdx+3)}/{countF},0.5)"
+                countF=f"COUNT({self.rc2a1(row, cIdx+6+nPlayed)}:{self.rc2a1(row,cIdx+4+2*nPlayed)})"
+                sh.cell(row, cIdx+2).value = f"=IF({countF}>0,{self.rc2a1(row, cIdx+4)}/{countF},0.5)"
                 sh.cell(row, cIdx+1).number_format = sh.cell(row, cIdx+2).number_format = "0.00%"
                 sh.cell(row, cIdx+3).value = f"=SUM({self.rc2a1(row, cIdx+7)}:{self.rc2a1(row,cIdx+5+nPlayed)})"
                 sh.cell(row, cIdx+4).value = f"=SUM({self.rc2a1(row, cIdx+6+nPlayed)}:{self.rc2a1(row,cIdx+4+2*nPlayed)})"
@@ -261,9 +263,9 @@ class Mitchell(PairGames):
                 for i in range(2):
                     n = nPlayed - 1
                     for rCmp in range(n):
-                        cmpF = f"=IF(AND(ISNUMBER({self.rc2a1(row, cIdx+5+i)}),ISNUMBER({self.rc2a1(row+opponents[rCmp], cIdx+5+i)})),"
+                        cmpF = f"=IF(ISNUMBER({self.rc2a1(row, cIdx+5+i)}),IF(ISNUMBER({self.rc2a1(row+opponents[rCmp], cIdx+5+i)}),"
                         cmpF += f"IF({self.rc2a1(row, cIdx+5+i)}>{self.rc2a1(row+opponents[rCmp], cIdx+5+i)},1,"
-                        cmpF += f"IF({self.rc2a1(row, cIdx+5+i)}={self.rc2a1(row+opponents[rCmp], cIdx+5+i)},0.5,0)),0.5)"
+                        cmpF += f'IF({self.rc2a1(row, cIdx+5+i)}={self.rc2a1(row+opponents[rCmp], cIdx+5+i)},0.5,0)),""),"")'
                         targetC = cIdx+7+rCmp+i*n
                         sh.cell(row, targetC).value = cmpF
 
@@ -316,8 +318,8 @@ class Mitchell(PairGames):
         for t,tbl in self.sqSetup.items():
             for r in tbl:
                 r['Board'] = [r['Board']*self.decks + x for x in range(self.decks)]
-                r['NS'] = (r['NS'] - 1) * 2 + 1
-                r['EW'] *= 2
+                r['NS'] = r['NS'] * 2
+                r['EW'] *= (r['EW'] - 1) * 2 + 1
                 for b in r['Board']:
                     if b not in self.boardData:
                         self.boardData[b] = []
