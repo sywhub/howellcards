@@ -65,6 +65,7 @@ class Mitchell(PairGames):
         return ns == 0
 
     def main(self):
+        self.log.debug('Main goes')
         # initData must be the first one
         self.initData()
         self.roster()
@@ -96,6 +97,7 @@ class Mitchell(PairGames):
         self.initRounds()
 
     def roster(self):
+        self.log.debug('Roster sheet and PDF')
         self.rosterSheet()
         self.rosterPDF()
     
@@ -184,6 +186,7 @@ class Mitchell(PairGames):
     # roster shows meta info first
     # Not doing meta sheet
     def meta(self):
+        self.log.debug('Meta')
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         title = 'Mitchell Tournament'
@@ -259,6 +262,7 @@ class Mitchell(PairGames):
         return
 
     def setTableTexts(self):
+        self.log.debug('Setting Table borders')
         if self.pairs != 8:
             nsText = []
             ewText = []
@@ -277,6 +281,7 @@ class Mitchell(PairGames):
         self.Tables(nsText, ewText)
 
     def loadSquare(self):
+        self.log.debug('Load Square data')
         self.sqSetup = {
             # Primary key is the table number
             # Pair numbering in this data is separated by NS/EW
@@ -309,6 +314,7 @@ class Mitchell(PairGames):
                     self.boardData[b].append((r['Round'], t, r['NS'], r['EW']))
 
     def results(self):
+        self.log.debug('Add results to Roster')
         sh = self.wb['Roster']
         nRows = 0
         row = 4
@@ -337,6 +343,7 @@ class Mitchell(PairGames):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
         fn = f'{here}/../mitchell{self.pairs}x{self.decks}'
+        self.log.debug(f'Save files: {fn}')
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
@@ -361,5 +368,4 @@ if __name__ == '__main__':
             log.setLevel(l[1])
             break
     mitchell = Mitchell(log, args.pair, args.boards, args.fake)
-    # A match has n rounds, each round has m boards, divided into two halves, each half of the boards
     mitchell.main()
