@@ -15,7 +15,10 @@ class DupBridge:
         self.HeaderFont = Font(bold=True, size=14)
         self.centerAlign = Alignment(horizontal='center')
         self.trumps = ('D/C', 'H/S', 'NT')  
-        self.thinLine = Border(top=Side(style='thin', color="000000"))
+        self.thinLine = Side(style='thin', color="000000")
+        self.mediumLine = Side(style='medium',color="000000")
+        self.thinTop = Border(top=self.thinLine)
+        self.thinLeft = Border(left=self.thinLine)
         self.fake = False
 
     # IMP conversion table
@@ -477,7 +480,7 @@ class PairGames(DupBridge):
     #
     # "Net" is a simple formula so that no cell is blank, other than Averages
     # The calculation area is pair-wise comparisons to all opponents.  It's slightly esoteric.
-    def computeMP(self, sh, cIdx, nPlayed, row, cursorRow, rawNS, rawEW, calcStart=7):
+    def computeMP(self, sh, cIdx, nPlayed, row, cursorRow, netIdx, calcStart=7):
         Win = 1.0
         Tie = 0.5
         Lost = 0.0
@@ -490,12 +493,11 @@ class PairGames(DupBridge):
             # "Non-comparisions" are blank cells and skipped by "COUNT"
             # Therefore the % is based on the times the board is actually played, not counting Averages
             # The Average cell is simply assigned as 50%
-            sh.cell(row, cIdx+1+i).value = f"=IF(COUNT({spread})>0,{self.rc2a1(row, cIdx+3)}/COUNT({spread}),{Lost})"
+            sh.cell(row, cIdx+1+i).value = f"=IF(COUNT({spread})>0,{self.rc2a1(row, cIdx+3+i)}/COUNT({spread}),{Tie})"
             sh.cell(row, cIdx+1+i).number_format = sh.cell(row, cIdx+2).number_format = "0.00%"
             sh.cell(row, cIdx+3+i).value = f"=SUM({spread})"
             sh.cell(row, cIdx+3+i).number_format = "#0.00"
 
-            sh.cell(row, cIdx+5+i).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
             # "cursorRow" is the counter within the current "play" group.  It goes from 0 to nPlayed - 1.
             # This comprehensive create the relative rows for *this* player to compare with.
             # By definition, there's only nPlayed - 1 opponents.
@@ -507,8 +509,14 @@ class PairGames(DupBridge):
                 # if self is not a number, then blank out all comparisions
                 # if the opponent is not a number, make that comparision blank
                 # Otherwise, a win is 1 pt, tie 0.5, and lost 0.o
-                cmpF = f"=IF(ISNUMBER({self.rc2a1(row, cIdx+5+i)}),IF(ISNUMBER({self.rc2a1(row+opponents[rCmp], cIdx+5+i)}),"
-                cmpF += f"IF({self.rc2a1(row, cIdx+5+i)}>{self.rc2a1(row+opponents[rCmp], cIdx+5+i)},{Win},"
-                cmpF += f'IF({self.rc2a1(row, cIdx+5+i)}={self.rc2a1(row+opponents[rCmp], cIdx+5+i)},{Tie},{Lost})),""),"")'
+                cmpF = f"=IF(ISNUMBER({self.rc2a1(row, netIdx+i)}),IF(ISNUMBER({self.rc2a1(row+opponents[rCmp], netIdx+i)}),"
+                cmpF += f"IF({self.rc2a1(row, netIdx+i)}>{self.rc2a1(row+opponents[rCmp], netIdx+i)},{Win},"
+                cmpF += f'IF({self.rc2a1(row, netIdx+i)}={self.rc2a1(row+opponents[rCmp], netIdx+i)},{Tie},{Lost})),""),"")'
                 targetC = cIdx+calcStart+rCmp+i*n
                 sh.cell(row, targetC).value = cmpF
+
+    def computeNet(self, sh, row, raw, target):
+        rawNS = self.rc2a1(row, raw)
+        rawEW = self.rc2a1(row, raw+1)
+        sh.cell(row, target).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
+        sh.cell(row, target+1).value = f'=IF(ISNUMBER({rawEW}),{rawEW},IF(ISNUMBER({rawNS}),-{rawNS},""))'

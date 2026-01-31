@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
-# Generate a team match setup
+# Generate Mitchell movements
 #   A PDF with Roster and Score sheets
 #   An Excel spreadsheet to enter the results and calculate the scores
 #
-# This program arrange a tournament for 4 pairs to play in 1 to 3 rounds of "team matches".
-# Each match is formally a match of 2 teams of 2 pairs.  At the end of each match, we change the composition
-# of both teams.  In 3 matches, therefore, each pair has played with the other 2.
+# A 4-table Mitchell use "Square" arrangement, found at MIT web site
 #
-import numbers
 import argparse
 import logging
 from maininit import setlog
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side
+from openpyxl.styles import Border
 import pdf
 from docset import PairGames
 import datetime
 
-# Pairs are internally numbered 1,3,5,... for NS pairs and 2,4,6,... for EW
+# Pairs are internally numbered 1,3,5,... for EW pairs and 2,4,6,... for NS
 # Pair 0 is the sit-out phantom pair
 # Externally, they are number 1 to n for both NS and EW sides
 class Mitchell(PairGames):
@@ -26,9 +23,6 @@ class Mitchell(PairGames):
         self.pairs = p
         self.decks = b
         self.tables = (self.pairs + 1) // 2
-        self.boardSet = self.tables
-        if self.tables % 2 == 0:
-            self.boardSet += 1
         self.oddPairs = self.pairs % 2 == 1
         self.fake = f
         self.pdf = pdf.PDF()
@@ -65,14 +59,13 @@ class Mitchell(PairGames):
         return x * 2 + 1
     
     def boardIdx(self, r, t):
-        return ((r + t) % self.boardSet) * self.decks
+        return ((r + t) % self.tables) * self.decks
 
     def ifSitout(self, t, ns, ew):
         return ns == 0
 
-
-    def go(self):
-        # the sequence of calls is important
+    def main(self):
+        # initData must be the first one
         self.initData()
         self.roster()
         self.roundTab()
@@ -87,6 +80,7 @@ class Mitchell(PairGames):
         self.save()
         return
 
+    # Generate "boardData" and "roundData"
     def initData(self):
         self.boardData = {}
         if self.pairs == 8:
@@ -187,6 +181,8 @@ class Mitchell(PairGames):
             start -= 1
         return
 
+    # roster shows meta info first
+    # Not doing meta sheet
     def meta(self):
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -211,12 +207,14 @@ class Mitchell(PairGames):
         self.pdf.set_xy(x, y)
         return self.pdf.get_y()
 
+    # Board tab references its data from the Round tab, for consistency
+    # Then it compute the scores on the sheet
     def boardTab(self):
         self.log.debug('Saving by Board')
         headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
         sh, row = self.contractHeaders(headers, 'By Board', ['Scores','%', 'Pts', 'Net'], 1)
         calcs = ['NS', 'EW'] * 3
-        calcs.append('Calculation Area')
+        calcs.append('MP Calculation Area')
         col = len(headers) + 1
         for h in calcs:
             sh.cell(row-1, col).value = h
@@ -228,7 +226,7 @@ class Mitchell(PairGames):
         sh.merge_cells(f"{self.rc2a1(row-1, col-1)}:{self.rc2a1(row-1,col+self.tables)}")
         rGap = self.tables * self.decks    # Number of rows between each round
         for b in self.boardData.keys():
-            sh.cell(row, 1).value = b+1
+            sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign
             cursorRow = 0
             for r in self.boardData[b]: # (round, table, NS, EW)
@@ -246,14 +244,18 @@ class Mitchell(PairGames):
 
                 nPlayed = len(self.boardData[b])    # # of times this board was played
                 cIdx = len(headers)
-                rawNS = self.rc2a1(row, cIdx - 1)
-                rawEW = self.rc2a1(row, cIdx)
-                # Computing MPs
-                self.computeMP(sh, cIdx, nPlayed, row, cursorRow, rawNS, rawEW)
+                nIdx = cIdx + 5
+                self.computeNet(sh, row, cIdx-1, nIdx)
+                self.computeMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
                 row += 1
                 cursorRow += 1
             for c in range(len(headers)+len(calcs)+(self.tables-1)*2-1):
                 sh.cell(row-1, c+1).border = self.bottomLine
+        for c in [len(headers)+1, len(headers)+len(calcs)-2]:
+            for r in range(2,sh.max_row+1):
+                bd = sh.cell(r, c).border
+                sh.cell(r, c).border = Border(left=self.thinLine, bottom=bd.bottom)
+
         return
 
     def setTableTexts(self):
@@ -360,4 +362,4 @@ if __name__ == '__main__':
             break
     mitchell = Mitchell(log, args.pair, args.boards, args.fake)
     # A match has n rounds, each round has m boards, divided into two halves, each half of the boards
-    mitchell.go()
+    mitchell.main()

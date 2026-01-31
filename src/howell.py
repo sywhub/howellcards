@@ -243,7 +243,7 @@ class Howell(PairGames):
                 cursorRow += 1
                 row += 1
         borderCols = [12, 18]
-        leftBorder = Border(left=Side(style='medium',color="000000"))
+        leftBorder = Border(left=self.mediumLine)
         for r in range(1, row):
             for c in borderCols:
                 sh.cell(r, c).border = leftBorder
@@ -256,7 +256,7 @@ class Howell(PairGames):
         for r in range(2, len(rounds)*nTbl*self.decks, nTbl):
             for c in range(1, allCols):
                 bds = sh.cell(r, c).border
-                sh.cell(r, c).border = Border(left=bds.left, bottom=self.thinLine.top)
+                sh.cell(r, c).border = Border(left=bds.left, bottom=self.thinLine)
 
 
 
