@@ -232,15 +232,11 @@ class Mitchell(PairGames):
             sh.cell(row, 1).alignment = self.centerAlign
             cursorRow = 0
             for r in self.boardData[b]: # (round, table, NS, EW)
-                nPlayed = len(self.boardData[b])    # # of times this board was played
                 sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(r[0] * rGap + 3, 1)}"
                 tBase = r[0] * rGap + r[1] * self.decks + 3
                 sh.cell(row, 3).value = f"='By Round'!{self.rc2a1(tBase, 2)}"
                 sh.cell(row, 4).value = f"='By Round'!{self.rc2a1(tBase, 3)}"
                 sh.cell(row, 5).value = f"='By Round'!{self.rc2a1(tBase, 4)}"
-                cIdx = len(headers)
-                rawNS = self.rc2a1(row, cIdx - 1)
-                rawEW = self.rc2a1(row, cIdx)
                 tBase += b % self.decks
                 for i in range(6, len(headers)+1):
                     c = f"'By Round'!{self.rc2a1(tBase, i)}"
@@ -248,26 +244,12 @@ class Mitchell(PairGames):
                 for i in range(2,7):
                     sh.cell(row, i).alignment = self.centerAlign
 
+                nPlayed = len(self.boardData[b])    # # of times this board was played
+                cIdx = len(headers)
+                rawNS = self.rc2a1(row, cIdx - 1)
+                rawEW = self.rc2a1(row, cIdx)
                 # Computing MPs
-                for i in range(2):
-                    cStart = cIdx + 7 + i*(nPlayed - 1)
-                    cEnd   = cStart + nPlayed - 2
-                    spread=f"{self.rc2a1(row, cStart)}:{self.rc2a1(row, cEnd)}"
-                    sh.cell(row, cIdx+1+i).value = f"=IF(COUNT({spread})>0,{self.rc2a1(row, cIdx+3)}/COUNT({spread}),0.5)"
-                    sh.cell(row, cIdx+1+i).number_format = sh.cell(row, cIdx+2).number_format = "0.00%"
-                    sh.cell(row, cIdx+3+i).value = f"=SUM({spread})"
-                    sh.cell(row, cIdx+3+i).number_format = "#0.00"
-
-                    sh.cell(row, cIdx+5+i).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
-                    opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
-                    n = nPlayed - 1
-                    for rCmp in range(n):
-                        cmpF = f"=IF(ISNUMBER({self.rc2a1(row, cIdx+5+i)}),IF(ISNUMBER({self.rc2a1(row+opponents[rCmp], cIdx+5+i)}),"
-                        cmpF += f"IF({self.rc2a1(row, cIdx+5+i)}>{self.rc2a1(row+opponents[rCmp], cIdx+5+i)},1,"
-                        cmpF += f'IF({self.rc2a1(row, cIdx+5+i)}={self.rc2a1(row+opponents[rCmp], cIdx+5+i)},0.5,0)),""),"")'
-                        targetC = cIdx+7+rCmp+i*n
-                        sh.cell(row, targetC).value = cmpF
-
+                self.computeMP(sh, cIdx, nPlayed, row, cursorRow, rawNS, rawEW)
                 row += 1
                 cursorRow += 1
             for c in range(len(headers)+len(calcs)+(self.tables-1)*2-1):

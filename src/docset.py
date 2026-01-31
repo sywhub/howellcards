@@ -468,3 +468,47 @@ class PairGames(DupBridge):
             tags += 1
             y = self.pdf.sectionDivider(nTagsPage, tags, self.pdf.margin) + self.pdf.margin * 2
         return
+
+    # Computing MPs
+    # cIdx is the column on the left (one less) of the MP% columns
+    # We have 4 MP "result" columns: 2 for % and 2 for Pts.
+    # Then we have another 2 columns for "net" scores.
+    # That's 6 columns, therefore the magic "7" is where the calculation area start
+    #
+    # "Net" is a simple formula so that no cell is blank, other than Averages
+    # The calculation area is pair-wise comparisons to all opponents.  It's slightly esoteric.
+    def computeMP(self, sh, cIdx, nPlayed, row, cursorRow, rawNS, rawEW, calcStart=7):
+        Win = 1.0
+        Tie = 0.5
+        Lost = 0.0
+        # do twice, one for NS and another for EW
+        for i in range(2):
+            cStart = cIdx + calcStart + i*(nPlayed - 1)
+            cEnd   = cStart + nPlayed - 2
+            spread=f"{self.rc2a1(row, cStart)}:{self.rc2a1(row, cEnd)}"
+            # The results are the computations from the calculation areas
+            # "Non-comparisions" are blank cells and skipped by "COUNT"
+            # Therefore the % is based on the times the board is actually played, not counting Averages
+            # The Average cell is simply assigned as 50%
+            sh.cell(row, cIdx+1+i).value = f"=IF(COUNT({spread})>0,{self.rc2a1(row, cIdx+3)}/COUNT({spread}),{Lost})"
+            sh.cell(row, cIdx+1+i).number_format = sh.cell(row, cIdx+2).number_format = "0.00%"
+            sh.cell(row, cIdx+3+i).value = f"=SUM({spread})"
+            sh.cell(row, cIdx+3+i).number_format = "#0.00"
+
+            sh.cell(row, cIdx+5+i).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
+            # "cursorRow" is the counter within the current "play" group.  It goes from 0 to nPlayed - 1.
+            # This comprehensive create the relative rows for *this* player to compare with.
+            # By definition, there's only nPlayed - 1 opponents.
+            opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
+            n = nPlayed - 1
+            # each column advanced (targetC) compares this row with one of the opponents (different rows)
+            # So this is like 2-dimensional movements
+            for rCmp in range(n):
+                # if self is not a number, then blank out all comparisions
+                # if the opponent is not a number, make that comparision blank
+                # Otherwise, a win is 1 pt, tie 0.5, and lost 0.o
+                cmpF = f"=IF(ISNUMBER({self.rc2a1(row, cIdx+5+i)}),IF(ISNUMBER({self.rc2a1(row+opponents[rCmp], cIdx+5+i)}),"
+                cmpF += f"IF({self.rc2a1(row, cIdx+5+i)}>{self.rc2a1(row+opponents[rCmp], cIdx+5+i)},{Win},"
+                cmpF += f'IF({self.rc2a1(row, cIdx+5+i)}={self.rc2a1(row+opponents[rCmp], cIdx+5+i)},{Tie},{Lost})),""),"")'
+                targetC = cIdx+calcStart+rCmp+i*n
+                sh.cell(row, targetC).value = cmpF
