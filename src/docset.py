@@ -174,8 +174,10 @@ class PairGames(DupBridge):
     def pairN(self, n):
         return n + 1
 
+    # turn pair number to readable ID
     def pairID(self, n):
         return f"{n+1}"
+    
 
     def fakeScore(self, sh, row, col):
         if random.random() < 0.90:
@@ -296,12 +298,13 @@ class PairGames(DupBridge):
                         pairData[v[p]] = []
                     pairData[v[p]].append((v[0], b, v[1], v[2], v[3])) # (round, board, table, NS, EW)
         tblCols = []
-        nPerPage = 2 if len(pairData[1]) < 24 else 1
+        nPerPage = 2 if len(pairData[1]) < 18 else 1
         pIdx = 0
         xMargin = self.pdf.margin * 2
-        hdrs = ['Round', 'Board', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        hdrs = ['Round', 'Board', 'Sit-Out', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        hdrs[2] = 'NS'
         for p in sorted(pairData.keys()):
             if self.pairID(p) == self.SITOUT:
                 continue
@@ -377,20 +380,25 @@ class PairGames(DupBridge):
         xMargin = 0.5
         self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.rosterPt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        tblCols[3] = self.pdf.get_string_width('8'*self.boards*2+','*(self.boards-1)) + 0.25
+        tblCols[3] = self.pdf.get_string_width('8'*self.decks*2+','*(self.decks-1)) + 0.25
         w = sum(tblCols)
         xMargin = (self.pdf.w - w) / 2
+        tblHeight = (len(tables[0][0])+1) * self.pdf.pt2in(self.pdf.rosterPt)
+        top = self.pdf.pt2in(self.pdf.bigPt) * 2.5 + 1
+        compassTop = self.pdf.h - (self.pdf.pt2in(self.pdf.bigPt) * 5 + self.pdf.starRadius + 2)
 
         for t in sorted(tables.keys()):
-            if self.ifSitout(t, 0, 0):
+            if self.ifSitout(t, tables[t][0][0]['NS'], tables[t][0][0]['EW']):
                 continue
             self.pdf.add_page()
             self.pdf.movementSheet()
-            self.pdf.compass()
+            if compassTop > top + tblHeight:
+                self.pdf.compass()
             self.pdf.tableAnchors(f"{t+1}")
-            self.pdf.inkEdgeText(nsTexts[t], ewTexts[t])
+            if nsTexts != None and ewTexts != None:
+                self.pdf.inkEdgeText(nsTexts[t], ewTexts[t])
             self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.rosterPt)
-            self.pdf.headerRow(xMargin, 2, tblCols, hdrs, ' ')
+            self.pdf.headerRow(xMargin, top, tblCols, hdrs, ' ')
             self.pdf.set_font(size=self.pdf.rosterPt)
             y = self.pdf.get_y()
             h = self.pdf.lineHeight(self.pdf.font_size_pt);
@@ -398,11 +406,65 @@ class PairGames(DupBridge):
             for r in sorted(tables[t].keys()):
                 tRound = tables[t][r]
                 self.pdf.cell(tblCols[0], h, text=f'{r+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(tables[t][r][0]['NS'])}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(tables[t][r][0]['EW'])}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(tRound[0]['NS'])}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(tRound[0]['EW'])}', align='C', border=1)
                 bds = ""
                 for b in tRound:
                     bds += f'{b['Board']+1},'
                 self.pdf.cell(tblCols[3], h, text=bds[:-1], align='C', border=1)
                 y += h
                 self.pdf.set_xy(xMargin, y + h)
+
+    def idTags(self):
+        idData = {}
+        for rd, tbl in self.roundData.items(): # (round, table, NS, EW)
+            for t, r in tbl.items():
+                if r['NS'] not in idData:
+                    idData[r['NS']] = []
+                if r['EW'] not in idData:
+                    idData[r['EW']] = []
+                idData[r['NS']].append((rd, t, r['NS'], r['EW']))
+                idData[r['EW']].append((rd, t, r['NS'], r['EW']))
+        self.idTagsByData(idData)
+
+    def idTagsByData(self, data):
+        tags = 0
+        colW = []
+        hdrs = ['Round', 'Table', 'Seat', 'vs']
+        self.pdf.setHeaders(0, hdrs, colW)
+        # page can be portrait or landscape
+        w = min(self.pdf.w,self.pdf.h)
+        leftMargin = (w - 2 * sum(colW)) / 4
+        cWidth = w / 2
+
+        nTagsPage = 4 if len(data) <= 8 else 2
+        for id in sorted(data.keys()):
+            if self.pairID(id) == self.SITOUT:
+                continue
+            if tags % nTagsPage == 0:
+                self.pdf.add_page(orientation='P') # no header/footer
+                y = self.pdf.margin * 2
+            rData = sorted(data[id], key=lambda x: x[0])    # by round
+            for half in range(2):   # two identical tags for each person of the pair
+                self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
+                self.pdf.set_xy(leftMargin+cWidth*half, y)
+                self.pdf.cell(text=f"Pair: {self.pairID(id)}")
+                ty = y + self.pdf.lineHeight(self.pdf.font_size_pt)
+                self.pdf.set_xy(leftMargin+cWidth*half, ty)
+                self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.smallPt)
+                h = self.pdf.lineHeight(self.pdf.font_size_pt)
+                for i in range(len(hdrs)):
+                    self.pdf.cell(colW[i], h, text=hdrs[i], align='C', border=1)
+                ty +=  h
+
+                for r in rData:
+                    opp,seat = (self.pairN(r[3]),'NS') if id == r[2] else (self.pairN(r[2]),'EW')
+                    self.pdf.set_xy(leftMargin+cWidth*half, ty)
+                    self.pdf.cell(colW[0], h, text=f"{r[0]+1}", align='C', border=1)
+                    self.pdf.cell(colW[1], h, text=f"{r[1]+1}", align='C', border=1)
+                    self.pdf.cell(colW[2], h, text=f"{seat}", align='C', border=1)
+                    self.pdf.cell(colW[3], h, text=f"{opp}", align='C', border=1)
+                    ty += h
+            tags += 1
+            y = self.pdf.sectionDivider(nTagsPage, tags, self.pdf.margin) + self.pdf.margin * 2
+        return

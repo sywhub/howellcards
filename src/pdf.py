@@ -192,12 +192,7 @@ class PDF(FPDF):
             topEdge = self.lineHeight(PDF.bigPt) * 3.5
             top = (bottom - topEdge - tblHeight) / 2 + topEdge
                 
-            tblIdText = f'Table {t+1}'
-            x = self.setHCenter(self.get_string_width(tblIdText))
-            self.set_xy(x, top)
-            self.set_font(self.serifFont, style='B', size=PDF.titlePt)
-            self.cell(text=tblIdText)
-            self.set_font(self.sansSerifFont)
+            self.set_y(top)
             cols = self.tableRoundHeaders()
             allWidth = sum(cols)
             x = self.setHCenter(allWidth)
@@ -240,52 +235,8 @@ class PDF(FPDF):
             self.set_font(saveFont)
         return
 
-    def idTags(self, data):
-        round1 = []
-        for k,v in data.items():
-            if v[0][0]['NS'] != 0:
-                round1.append((v[0][0]['NS'], k, 'NS'))
-            round1.append((v[0][0]['EW'], k, 'EW'))
-        round1.sort(key=lambda x: x[0])
-
-        nTagsPage = len(round1) if len(round1) <= 8 else 8
-        nPage = len(round1) // 8 + 1
-        cHeight = self.eph / nTagsPage
-        cWidth = self.w / 2
-        for p in range(nPage):
-            y = PDF.margin
-            x = PDF.margin
-            self.add_page(orientation='portrait')
-            self.set_line_width(PDF.thinLine)
-            self.set_dash_pattern(dash=0.1, gap=0.1)
-            for r in range(nTagsPage - 1):
-                y += cHeight
-                self.line(x1=0, y1=y, x2=self.w, y2=y)
-            self.line(x1=cWidth, y1=0, x2=cWidth, y2=self.h)
-            self.set_dash_pattern()
-            x = self.margin + 0.5
-            if len(round1) >= nTagsPage and p <= 0:
-                enumRound = round1[:nTagsPage]
-            else:
-                enumRound = round1[nTagsPage:]
-            for l,r in enumerate(enumRound):
-                self.set_font(self.serifFont, size=PDF.rosterPt)
-                pairId = f'Pair {r[0]}'
-                moveInstruction = f'Round 1 go to Table {r[1]+1}, {r[2]}'
-                y = cHeight * l + self.lineHeight(self.font_size_pt)
-                for xPos in [x, x+cWidth]:
-                    self.set_xy(xPos, y)
-                    self.cell(w=cWidth, h=self.lineHeight(self.font_size_pt), text=pairId, align='L')
-                y += 2 * self.pt2in(self.font_size_pt)
-                self.set_font(self.sansSerifFont, size=8)
-                for xPos in [x, x+cWidth]:
-                    self.set_xy(xPos, y)
-                    outtxt = f'{moveInstruction}\nSubsequent rounds follow the movement sheet on the table.'
-                    self.multi_cell(w=cWidth, h=self.lineHeight(self.font_size_pt), text=outtxt, align='L')
-
-
     def tableRoundHeaders(self):
-        line = self.get_y() + self.lineHeight(self.font_size_pt) 
+        line = self.get_y()
         self.set_font(style='B', size=PDF.headerPt)
         h = self.lineHeight(self.font_size_pt)
         headers = ['Round', 'NS', 'EW', 'Boards']

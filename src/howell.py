@@ -46,7 +46,7 @@ class Howell(PairGames):
 
     def pairID(self, n):
         return f"{n if n != 0 else self.SITOUT}"
-
+	
     def boardList(self, bIdx):
         return [self.decks*bIdx+x for x in range(self.decks)]
     
@@ -132,8 +132,8 @@ class Howell(PairGames):
                         if rounds[r][tbl]['EW'] in next.keys():
                             pdfData[tbl]['ewNext'] = (next[rounds[r][tbl]['EW']], side)
         self.pdf.overview(pdfData)
+        self.idTags()
         self.pdf.tableOut(pdfData)
-        self.pdf.idTags(pdfData)
         self.Pickups()
         self.Journal()
 
