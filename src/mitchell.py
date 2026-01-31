@@ -249,18 +249,17 @@ class Mitchell(PairGames):
                     sh.cell(row, i).alignment = self.centerAlign
 
                 # Computing MPs
-                countF=f"COUNT({self.rc2a1(row, cIdx+7)}:{self.rc2a1(row,cIdx+5+nPlayed)})"
-                sh.cell(row, cIdx+1).value = f"=IF({countF}>0,{self.rc2a1(row, cIdx+3)}/{countF},0.5)"
-                countF=f"COUNT({self.rc2a1(row, cIdx+6+nPlayed)}:{self.rc2a1(row,cIdx+4+2*nPlayed)})"
-                sh.cell(row, cIdx+2).value = f"=IF({countF}>0,{self.rc2a1(row, cIdx+4)}/{countF},0.5)"
-                sh.cell(row, cIdx+1).number_format = sh.cell(row, cIdx+2).number_format = "0.00%"
-                sh.cell(row, cIdx+3).value = f"=SUM({self.rc2a1(row, cIdx+7)}:{self.rc2a1(row,cIdx+5+nPlayed)})"
-                sh.cell(row, cIdx+4).value = f"=SUM({self.rc2a1(row, cIdx+6+nPlayed)}:{self.rc2a1(row,cIdx+4+2*nPlayed)})"
-                sh.cell(row, cIdx+3).number_format = sh.cell(row, cIdx+4).number_format = "#0.00"
-                sh.cell(row, cIdx+5).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
-                sh.cell(row, cIdx+6).value = f'=IF(ISNUMBER({rawEW}),{rawEW},IF(ISNUMBER({rawNS}),-{rawNS},""))'
-                opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
                 for i in range(2):
+                    cStart = cIdx + 7 + i*(nPlayed - 1)
+                    cEnd   = cStart + nPlayed - 2
+                    spread=f"{self.rc2a1(row, cStart)}:{self.rc2a1(row, cEnd)}"
+                    sh.cell(row, cIdx+1+i).value = f"=IF(COUNT({spread})>0,{self.rc2a1(row, cIdx+3)}/COUNT({spread}),0.5)"
+                    sh.cell(row, cIdx+1+i).number_format = sh.cell(row, cIdx+2).number_format = "0.00%"
+                    sh.cell(row, cIdx+3+i).value = f"=SUM({spread})"
+                    sh.cell(row, cIdx+3+i).number_format = "#0.00"
+
+                    sh.cell(row, cIdx+5+i).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
+                    opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
                     n = nPlayed - 1
                     for rCmp in range(n):
                         cmpF = f"=IF(ISNUMBER({self.rc2a1(row, cIdx+5+i)}),IF(ISNUMBER({self.rc2a1(row+opponents[rCmp], cIdx+5+i)}),"
@@ -271,7 +270,7 @@ class Mitchell(PairGames):
 
                 row += 1
                 cursorRow += 1
-            for c in range(len(headers)+len(calcs)+self.tables+2):
+            for c in range(len(headers)+len(calcs)+(self.tables-1)*2-1):
                 sh.cell(row-1, c+1).border = self.bottomLine
         return
 
@@ -319,7 +318,7 @@ class Mitchell(PairGames):
             for r in tbl:
                 r['Board'] = [r['Board']*self.decks + x for x in range(self.decks)]
                 r['NS'] = r['NS'] * 2
-                r['EW'] *= (r['EW'] - 1) * 2 + 1
+                r['EW'] = (r['EW'] - 1) * 2 + 1
                 for b in r['Board']:
                     if b not in self.boardData:
                         self.boardData[b] = []
@@ -363,14 +362,14 @@ if __name__ == '__main__':
     log = setlog('mitchell', None)
     def mitchell_check(value):
         ivalue = int(value)
-        if ivalue == 16:
+        if ivalue in [11,12,15,16]:
             raise argparse.ArgumentTypeError(f"Cannot have even number of tables")
         return ivalue
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
     parser.add_argument('-b', '--boards', type=int, choices=range(1,7), default=4, help='Boards per round')
-    parser.add_argument('-p', '--pair', type=mitchell_check, choices=range(8,24), default=8, help='Number of pairs')
+    parser.add_argument('-p', '--pair', type=mitchell_check, choices=range(8,19), default=8, help='Number of pairs')
     parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
