@@ -28,7 +28,6 @@ class Howell(PairGames):
         self.fake = toFake
         self.pdf = pdf.PDF()
         self.wb = Workbook()
-        self.here = os.path.dirname(os.path.abspath(__file__))
         self.pairs = pairs
         self.tourneyData = tourney
         self.init()
@@ -38,8 +37,11 @@ class Howell(PairGames):
         self.Traveler()
         self.IMPTable()
         self.ScoreTable()
-        self.wb.save(f'{self.here}/../howell{self.pairs}.xlsx')
-        self.pdf.output(f'{self.here}/../howell{self.pairs}.pdf')
+        here = os.path.dirname(os.path.abspath(__file__))
+        fn = f'{here}/../howell{self.pairs}'
+        self.wb.save(f'{fn}.xlsx')
+        self.pdf.output(f'{fn}.pdf')
+        print(f'Saved {fn}.{{xlsx,pdf}}')
 
     def pairN(self, n):
         return n
@@ -146,22 +148,7 @@ class Howell(PairGames):
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 2)    # insert it as the 2nd sheet
         nTbl = len(rounds[0])
-        # first row setup some spanning column headers
-        mergeHdrs = [['Score', 2], ['IMP', 2], ['MP %', 2], ['MP Pts', 2], ['Net', 2],
-               ['IMP Calculation', nTbl*2 - 2],['MP Calculation', nTbl*2 - 2]]
-
-        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result'] + ['NS', 'EW'] * 5
-        pairWiseCol = len(headers) + 1
-        cStart = headers.index('Result') + 2
-        for h in mergeHdrs:
-            sh.cell(1, cStart).value = h[0]
-            sh.cell(1, cStart).font = self.noChangeFont
-            sh.cell(1, cStart).alignment = self.centerAlign
-            sh.merge_cells(f'{sh.cell(1,cStart).coordinate}:{sh.cell(1,cStart+h[1]-1).coordinate}')
-            cStart += h[1]
-        headers += [['NS Pair-Wise', nTbl - 1], ['EW Pair-Wise', nTbl - 1], ['NS MP Score', nTbl - 1], ['EW MP Score', nTbl - 1]]
-        # The contract column should be wider for data entry
-        row = self.headerRow(sh, headers, 2)
+        row, headers = self.boardSheetHeaders(sh, nTbl)
 
         # build a datastructure for ease of navigation
         # just pivotig the source data
@@ -182,7 +169,6 @@ class Howell(PairGames):
             cursorRow = 0
             # loop through the "rounds" this board were played
             for r in sorted(boards[b], key=lambda x: x[0]):
-                nPlayed = len(boards[b])    # # of times this board was played
                 # always reference the "By Round" sheet for ease of editing by hand
                 roundRow = r[0]*nTbl*self.decks+3
                 sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(roundRow, 1)}"
@@ -198,65 +184,17 @@ class Howell(PairGames):
                 sh.cell(row, 6).value = self.vulLookup(b)
                 sh.cell(row, 6).alignment = self.centerAlign
 
-                # There are steps to calculate IMP for each board
-                # Here are two columns for the end result
-                nCmps = len(boards[0]) - 1
-                avgRange = f'{sh.cell(row, pairWiseCol).coordinate}:{sh.cell(row, pairWiseCol+nCmps-1).coordinate}'
-                sh.cell(row, 12).value = f'=IFERROR(AVERAGE({avgRange}),"")'
-                sh.cell(row, 12).number_format = '#0.00'
-                avgRange = f'{sh.cell(row, pairWiseCol+nCmps).coordinate}:{sh.cell(row, pairWiseCol+2*nCmps-1).coordinate}'
-                sh.cell(row, 13).value = f'=IFERROR(AVERAGE({avgRange}),"")'
-                sh.cell(row, 13).number_format = '#0.00'
-                sumRange = f'{sh.cell(row, pairWiseCol+2*nCmps).coordinate}:{sh.cell(row, pairWiseCol+3*nCmps-1).coordinate}'
-                sh.cell(row, 14).value = f'={self.rc2a1(row, 16)}/{nPlayed-1}'
-                sh.cell(row, 14).number_format = '0.0%'
-                sh.cell(row, 15).value = f'={self.rc2a1(row, 17)}/{nPlayed-1}'
-                sh.cell(row, 15).number_format = '0.0%'
-                sh.cell(row, 16).value = f'=IFERROR(SUM({sumRange}),"")'
-                sh.cell(row, 16).number_format = '#0.00'
-                sumRange = f'{sh.cell(row, pairWiseCol+3*nCmps).coordinate}:{sh.cell(row, pairWiseCol+4*nCmps-1).coordinate}'
-                sh.cell(row, 17).value = f'=IFERROR(SUM({sumRange}),"")'
-                sh.cell(row, 17).number_format = '#0.00'
-
-                # IMP Computation sequence
-                # 1. For each side, record their "net" raw scores.  Negative if the other side scored
-                sh.cell(row, 18).value = f'=IF(ISNUMBER(J{row}),J{row},IF(ISNUMBER(K{row}),-K{row},""))'
-                sh.cell(row, 19).value = f'=IF(ISNUMBER(K{row}),K{row},IF(ISNUMBER(J{row}),-J{row},""))'
-                # 2. Compare to all other pairs, on the same side, and use the difference to lookup IMPs
-                # competitors are all other pairs
-                opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
-                startCol = [20, 20+nPlayed-1]
-                lookupCol = ['R', 'S']
-                for i in range(2):
-                    colInc = 0  # distance to the previous section
-                    n = nPlayed - 1
-                    for rCmp in range(n):
-                        cond=f'AND(ISNUMBER({lookupCol[i]}{row}),ISNUMBER({lookupCol[i]}{row+opponents[rCmp]}))'
-                        lookup=f"VLOOKUP(ABS({lookupCol[i]}{row}-{lookupCol[i]}{row+opponents[rCmp]}),'IMP Table'!$A$2:$C$26,3)*SIGN({lookupCol[i]}{row}-{lookupCol[i]}{row+opponents[rCmp]})"
-                        formula=f'=IF({cond},{lookup},"")'
-                        sh.cell(row, startCol[i]+colInc).value = formula
-                        cmpF = f'=IF({cond},'
-                        cmpF += f"IF({lookupCol[i]}{row}>{lookupCol[i]}{row+opponents[rCmp]},1,"
-                        cmpF += f"IF({lookupCol[i]}{row}={lookupCol[i]}{row+opponents[rCmp]},0.5,0)),0.5)"
-                        sh.cell(row, startCol[i]+2*nCmps+colInc).value = cmpF
-                        colInc += 1
+                nPlayed = len(boards[b])    # # of times this board was played
+                cIdx = headers.index('Result')+3
+                nIdx = cIdx + 7
+                self.computeNet(sh, row, cIdx-1, nIdx)
+                self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
+                self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
                 cursorRow += 1
                 row += 1
-        borderCols = [12, 18]
-        leftBorder = Border(left=self.mediumLine)
-        for r in range(1, row):
-            for c in borderCols:
-                sh.cell(r, c).border = leftBorder
-        allCols = 1
-        for h in headers:
-            if type(h) is str:
-                allCols += 1
-            else:
-                allCols += h[1]
-        for r in range(2, len(rounds)*nTbl*self.decks, nTbl):
-            for c in range(1, allCols):
-                bds = sh.cell(r, c).border
-                sh.cell(r, c).border = Border(left=bds.left, bottom=self.thinLine)
+            for c in range(len(headers)+(nTbl-1)*4-4):
+                sh.cell(row-1, c+1).border = self.bottomLine
+        self.boardVerticals(sh, headers, nTbl)
 
 
 
@@ -292,10 +230,21 @@ class Howell(PairGames):
         IMPRow = self.pairs + row + 2
         sh.cell(IMPRow, 1).value = 'Array Formula below, remove single quote'
         IMPRow += 1
+        sh.cell(IMPRow,1).value = 'IMP Ranking'
+        sh.cell(IMPRow,1).alignment = self.centerAlign
+        sh.cell(IMPRow,1).font = self.HeaderFont
+        sh.merge_cells(f'{self.rc2a1(IMPRow, 1)}:{self.rc2a1(IMPRow,5)}')
+        IMPRow += 1
+        sh.cell(IMPRow,1).value = f"'=SORT({self.rc2a1(row, 1)}:{self.rc2a1(row+self.pairs-1,5)},4,-1)"
         for i in range(self.pairs):
             sh.cell(IMPRow+i,4).number_format = "#0.00"
             sh.cell(IMPRow+i,5).number_format = "0.00%"
-        MPRow = self.pairs + IMPRow + 2
+        MPRow = self.pairs + IMPRow + 4
+        sh.cell(MPRow,1).value = 'MP Ranking'
+        sh.cell(MPRow,1).alignment = self.centerAlign
+        sh.cell(MPRow,1).font = self.HeaderFont
+        sh.merge_cells(f'{self.rc2a1(MPRow, 1)}:{self.rc2a1(MPRow,5)}')
+        MPRow += 1
         sh.cell(MPRow,1).value = f"'=SORT({self.rc2a1(row, 1)}:{self.rc2a1(row+self.pairs-1,5)},5,-1)"
         for i in range(self.pairs):
             sh.cell(MPRow+i,4).number_format = "#0.00"

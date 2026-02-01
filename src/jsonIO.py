@@ -82,7 +82,7 @@ class JsonIO:
 
         self.tournament = loadObj[str(self.pairs)]
         isValid = self.validateData()
-        self.showArrangement()
+        #self.showArrangement()
         if not isValid:
             self.tournament = None
         return self.tournament

@@ -224,23 +224,8 @@ class Mitchell(PairGames):
     # Then it compute the scores on the sheet
     def boardTab(self):
         self.log.debug('Saving by Board')
-        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
-        sh, row = self.contractHeaders(headers, 'By Board', ['Scores', 'IMP', 'MP %', 'MP Pts', 'Net'], 1)
-        calcs = ['NS', 'EW'] * 4
-        col = len(headers) + 1
-        for h in calcs:
-            sh.cell(row-1, col).value = h
-            sh.cell(row-1, col).font = self.HeaderFont
-            sh.cell(row-1, col).alignment = self.centerAlign
-            col += 1
-        for i in range(len(headers)+1, col+1):
-            sh.cell(row-1,i).font = self.noChangeFont
-        for h in ['MP Calculations', 'IMP Calculations']:
-            sh.cell(row-1, col).value = h
-            sh.cell(row-1, col).font = self.noChangeFont
-            sh.cell(row-1, col).alignment = self.centerAlign
-            sh.merge_cells(f"{self.rc2a1(row-1, col)}:{self.rc2a1(row-1,col+2*(self.tables-1)-1)}")
-            col += 2 * (self.tables - 1)
+        sh = self.wb.create_sheet('By Board', 1)
+        row, headers = self.boardSheetHeaders(sh, self.tables)
         rGap = self.tables * self.decks    # Number of rows between each round
         for b in self.boardData.keys():
             sh.cell(row, 1).value = b+1     # board #
@@ -260,23 +245,16 @@ class Mitchell(PairGames):
                 for i in range(2,7):
                     sh.cell(row, i).alignment = self.centerAlign
 
-                cIdx = len(headers)
+                cIdx = headers.index('Result')+3
                 nIdx = cIdx + 7
                 self.computeNet(sh, row, cIdx-1, nIdx)
                 self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
                 self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
                 row += 1
                 cursorRow += 1
-            for c in range(len(headers)+len(calcs)+(self.tables-1)*4):
+            for c in range(len(headers)+(self.tables-1)*4-4):
                 sh.cell(row-1, c+1).border = self.bottomLine
-        vertical = [len(headers)+1] 
-        vertical.append(vertical[-1] + len(calcs) - 2)
-        vertical.append(vertical[-1] + 2)
-        vertical.append(vertical[-1] + (self.tables - 1)*2) 
-        for c in vertical:
-            for r in range(2,sh.max_row+1):
-                bd = sh.cell(r, c).border
-                sh.cell(r, c).border = Border(left=self.thinLine, bottom=bd.bottom)
+        self.boardVerticals(sh, headers, self.tables)
 
         return
 
