@@ -72,6 +72,7 @@ class Mitchell(PairGames):
         self.roundTab()
         self.boardTab()
         self.results()
+        self.IMPTable()
         self.ScoreTable()
         self.idTags()  # PDF only
         self.setTableTexts()  # PDF only
@@ -123,6 +124,9 @@ class Mitchell(PairGames):
             ws.cell(row, 5).value = 'Score'
             ws.cell(row, 5).font = self.HeaderFont
             ws.cell(row, 5).alignment = self.centerAlign
+            ws.cell(row, 6).value = 'IMP'
+            ws.cell(row, 6).font = self.HeaderFont
+            ws.cell(row, 6).alignment = self.centerAlign
             row += 1
             toN = self.pairs + (1 if self.oddPairs else 0)
             avgStart = row
@@ -136,16 +140,22 @@ class Mitchell(PairGames):
                 ws.cell(row, 2).value = self.placeHolderName()
                 ws.cell(row, 3).value = self.placeHolderName()
                 row += 1
-            for i in range(5):
+
+            for i in range(6):
                 ws.cell(row-1, i+1).border = self.bottomLine
+
             ws.cell(row, 3).value = 'Average'
+            ws.cell(row,3).font = self.noChangeFont
+
             ws.cell(row, 4).value = f'=AVERAGE({self.rc2a1(avgStart, 4)}:{self.rc2a1(row-1,4)})'
             ws.cell(row, 5).value = f'=AVERAGE({self.rc2a1(avgStart, 5)}:{self.rc2a1(row-1,5)})'
+            ws.cell(row, 6).value = f'=SUM({self.rc2a1(avgStart, 6)}:{self.rc2a1(row-1,6)})'
             ws.cell(row,4).number_format = "0.00%"
             ws.cell(row,5).number_format = "#0.0"
-            ws.cell(row,3).font = self.noChangeFont
+            ws.cell(row,6).number_format = "#0.0"
             ws.cell(row,4).font = self.noChangeFont
             ws.cell(row,5).font = self.noChangeFont
+            ws.cell(row,6).font = self.noChangeFont
             row += 2
         row += 2
         ws.column_dimensions['B'].width = 30
@@ -215,9 +225,8 @@ class Mitchell(PairGames):
     def boardTab(self):
         self.log.debug('Saving by Board')
         headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
-        sh, row = self.contractHeaders(headers, 'By Board', ['Scores','%', 'Pts', 'Net'], 1)
-        calcs = ['NS', 'EW'] * 3
-        calcs.append('MP Calculation Area')
+        sh, row = self.contractHeaders(headers, 'By Board', ['Scores', 'IMP', 'MP %', 'MP Pts', 'Net'], 1)
+        calcs = ['NS', 'EW'] * 4
         col = len(headers) + 1
         for h in calcs:
             sh.cell(row-1, col).value = h
@@ -226,11 +235,17 @@ class Mitchell(PairGames):
             col += 1
         for i in range(len(headers)+1, col+1):
             sh.cell(row-1,i).font = self.noChangeFont
-        sh.merge_cells(f"{self.rc2a1(row-1, col-1)}:{self.rc2a1(row-1,col+self.tables)}")
+        for h in ['MP Calculations', 'IMP Calculations']:
+            sh.cell(row-1, col).value = h
+            sh.cell(row-1, col).font = self.noChangeFont
+            sh.cell(row-1, col).alignment = self.centerAlign
+            sh.merge_cells(f"{self.rc2a1(row-1, col)}:{self.rc2a1(row-1,col+2*(self.tables-1)-1)}")
+            col += 2 * (self.tables - 1)
         rGap = self.tables * self.decks    # Number of rows between each round
         for b in self.boardData.keys():
             sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign
+            nPlayed = len(self.boardData[b])    # # of times this board was played
             cursorRow = 0
             for r in self.boardData[b]: # (round, table, NS, EW)
                 sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(r[0] * rGap + 3, 1)}"
@@ -245,16 +260,20 @@ class Mitchell(PairGames):
                 for i in range(2,7):
                     sh.cell(row, i).alignment = self.centerAlign
 
-                nPlayed = len(self.boardData[b])    # # of times this board was played
                 cIdx = len(headers)
-                nIdx = cIdx + 5
+                nIdx = cIdx + 7
                 self.computeNet(sh, row, cIdx-1, nIdx)
-                self.computeMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
+                self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
+                self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
                 row += 1
                 cursorRow += 1
-            for c in range(len(headers)+len(calcs)+(self.tables-1)*2-1):
+            for c in range(len(headers)+len(calcs)+(self.tables-1)*4):
                 sh.cell(row-1, c+1).border = self.bottomLine
-        for c in [len(headers)+1, len(headers)+len(calcs)-2]:
+        vertical = [len(headers)+1] 
+        vertical.append(vertical[-1] + len(calcs) - 2)
+        vertical.append(vertical[-1] + 2)
+        vertical.append(vertical[-1] + (self.tables - 1)*2) 
+        for c in vertical:
             for r in range(2,sh.max_row+1):
                 bd = sh.cell(r, c).border
                 sh.cell(r, c).border = Border(left=self.thinLine, bottom=bd.bottom)
@@ -329,12 +348,15 @@ class Mitchell(PairGames):
                 if pName == self.SITOUT:
                     continue
                 ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+nRows,4+s)}"
-                sumRange = f"'By Board'!{self.rc2a1(3, 12+s)}:{self.rc2a1(3+nRows,12+s)}"
-                ptsRange = f"'By Board'!{self.rc2a1(3, 14+s)}:{self.rc2a1(3+nRows,14+s)}"
+                impRange = f"'By Board'!{self.rc2a1(3, 12+s)}:{self.rc2a1(3+nRows,12+s)}"
+                sumRange = f"'By Board'!{self.rc2a1(3, 14+s)}:{self.rc2a1(3+nRows,14+s)}"
+                ptsRange = f"'By Board'!{self.rc2a1(3, 16+s)}:{self.rc2a1(3+nRows,16+s)}"
                 sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divident}"
                 sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{ptsRange})"
+                sh.cell(row,6).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{impRange})"
                 sh.cell(row,4).number_format = "0.00%"
                 sh.cell(row,5).number_format = "#0.0"
+                sh.cell(row,6).number_format = "#0.0"
                 row += 1
             row += 3
 

@@ -520,3 +520,22 @@ class PairGames(DupBridge):
         rawEW = self.rc2a1(row, raw+1)
         sh.cell(row, target).value = f'=IF(ISNUMBER({rawNS}),{rawNS},IF(ISNUMBER({rawEW}),-{rawEW},""))'
         sh.cell(row, target+1).value = f'=IF(ISNUMBER({rawEW}),{rawEW},IF(ISNUMBER({rawNS}),-{rawNS},""))'
+
+    def computeIMP(self, sh, cIdx, nPlayed, row, cursorRow, netIdx, calcStart=9):
+        calcStart += 2 * (nPlayed - 1)
+        for i in range(2):
+            cStart = cIdx + calcStart + i*(nPlayed - 1)
+            cEnd   = cStart + nPlayed - 2
+            spread=f"{self.rc2a1(row, cStart)}:{self.rc2a1(row, cEnd)}"
+            sh.cell(row, cIdx+1+i).value = f'=SUM({spread})'
+            sh.cell(row, cIdx+1+i).number_format = sh.cell(row, cIdx+2).number_format = "#0.0"
+            opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
+            n = nPlayed - 1
+            for rCmp in range(n):
+                cmpF = f"=IF(AND(ISNUMBER({self.rc2a1(row, netIdx+i)}),ISNUMBER({self.rc2a1(row+opponents[rCmp], netIdx+i)})),"
+                cmpF += f"VLOOKUP(ABS({self.rc2a1(row, netIdx+i)}-{self.rc2a1(row+opponents[rCmp], netIdx+i)}),'IMP Table'!$A$2:$C$26,3)"
+                cmpF += f'*SIGN({self.rc2a1(row, netIdx+i)}-{self.rc2a1(row+opponents[rCmp], netIdx+i)}),0)'
+                targetC = cIdx+calcStart+rCmp+i*n
+                sh.cell(row, targetC).value = cmpF
+
+        return
