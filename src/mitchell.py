@@ -9,7 +9,7 @@ import argparse
 import logging
 from maininit import setlog
 from openpyxl import Workbook
-from openpyxl.styles import Border
+from openpyxl.styles import Font
 import pdf
 from docset import PairGames
 import datetime
@@ -106,12 +106,23 @@ class Mitchell(PairGames):
         ws = self.wb.active # the first tab
         ws.title = 'Roster'
         # First simple list of names
-        row = 1
-        ws.cell(row, 1).value = self.pdf.footerText
+        ws.cell(1, 1).value = self.pdf.headerText
+        # a less noticable color
+        ws.cell(1, 1).font = Font(size=10, italic=True, color="5DADE2")
+        row = 2
+        ws.cell(row, 1).value = "Mitchell Tournament Scoring"
         ws.cell(row, 1).font = self.HeaderFont
         ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,5).coordinate}')
         ws.cell(row, 1).alignment = self.centerAlign
-        row += 2
+        row += 1
+        for info in [['Pairs', self.pairs], ['Tables', self.tables], ['Boards per Round', self.decks]]:
+            ws.cell(row, 1).value = info[0]
+            ws.cell(row, 1).font = self.HeaderFont
+            ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,2).coordinate}')
+            ws.cell(row, 3).value = info[1]
+            row += 1
+        row += 1
+
         
         for s in range(2):
             ws.cell(row, 1).value =  f'{['NS', 'EW'][s]} Pairs'
@@ -121,12 +132,9 @@ class Mitchell(PairGames):
             ws.cell(row, 4).value = '%'
             ws.cell(row, 4).font = self.HeaderFont
             ws.cell(row, 4).alignment = self.centerAlign
-            ws.cell(row, 5).value = 'Score'
+            ws.cell(row, 5).value = 'IMP'
             ws.cell(row, 5).font = self.HeaderFont
             ws.cell(row, 5).alignment = self.centerAlign
-            ws.cell(row, 6).value = 'IMP'
-            ws.cell(row, 6).font = self.HeaderFont
-            ws.cell(row, 6).alignment = self.centerAlign
             row += 1
             toN = self.pairs + (1 if self.oddPairs else 0)
             avgStart = row
@@ -148,14 +156,11 @@ class Mitchell(PairGames):
             ws.cell(row,3).font = self.noChangeFont
 
             ws.cell(row, 4).value = f'=AVERAGE({self.rc2a1(avgStart, 4)}:{self.rc2a1(row-1,4)})'
-            ws.cell(row, 5).value = f'=AVERAGE({self.rc2a1(avgStart, 5)}:{self.rc2a1(row-1,5)})'
-            ws.cell(row, 6).value = f'=SUM({self.rc2a1(avgStart, 6)}:{self.rc2a1(row-1,6)})'
+            ws.cell(row, 5).value = f'=SUM({self.rc2a1(avgStart, 6)}:{self.rc2a1(row-1,6)})'
             ws.cell(row,4).number_format = "0.00%"
             ws.cell(row,5).number_format = "#0.0"
-            ws.cell(row,6).number_format = "#0.0"
             ws.cell(row,4).font = self.noChangeFont
             ws.cell(row,5).font = self.noChangeFont
-            ws.cell(row,6).font = self.noChangeFont
             row += 2
         row += 2
         ws.column_dimensions['B'].width = 30
@@ -314,7 +319,7 @@ class Mitchell(PairGames):
         self.log.debug('Add results to Roster')
         sh = self.wb['Roster']
         nRows = 0
-        row = 4
+        row = 8
         divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
 
         for b in self.boardData.values():
@@ -328,13 +333,10 @@ class Mitchell(PairGames):
                 ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+nRows,4+s)}"
                 impRange = f"'By Board'!{self.rc2a1(3, 12+s)}:{self.rc2a1(3+nRows,12+s)}"
                 sumRange = f"'By Board'!{self.rc2a1(3, 14+s)}:{self.rc2a1(3+nRows,14+s)}"
-                ptsRange = f"'By Board'!{self.rc2a1(3, 16+s)}:{self.rc2a1(3+nRows,16+s)}"
                 sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divident}"
-                sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{ptsRange})"
-                sh.cell(row,6).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{impRange})"
+                sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{impRange})"
                 sh.cell(row,4).number_format = "0.00%"
                 sh.cell(row,5).number_format = "#0.0"
-                sh.cell(row,6).number_format = "#0.0"
                 row += 1
             row += 3
 
