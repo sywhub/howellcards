@@ -1,4 +1,4 @@
-For Tournament Director: Howell Movement
+For Tournament Director: Mitchell Movement
 #There is a matching spreadsheet for this PDF.
 #There is no need to print all pages.
 #Bring writable masking tapes and pens to the  event.
@@ -10,7 +10,7 @@ For Tournament Director: Howell Movement
 #Fold and tuck the traveler for each board before the tournament begins.  Match board number with the traveler slip.
 #We provide 3 ways to keep scores: pickup slips, travelers, and the journal for each pair.  We recommend using two of them, up to the director.
 #Announce the direction of north to all participants.
-#Instruct all pairs to keep journals, North to keep score, South to caddy the boards.  #If using pickup slips, collect them at the end of each
-round.
+#Instruct all pairs to keep journals, North to keep score, South to caddy the boards.
+#If using pickup slips, collect them at the end of each round.
 #if using travelers, collect when the tournment ends.
 #Use the spreadsheet to record results.  It computes results automatically.

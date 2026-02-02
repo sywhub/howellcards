@@ -82,72 +82,59 @@ class PDF(FPDF):
         self.set_xy(self.margin, self.h - self.pt2in(self.font_size_pt)*4)
         self.cell(text=footerText)
 
-    # meta information for the tournament
-    def meta(self, log, title, meta):
-        self.set_font(style='B', size=PDF.headerPt)
+    def meta(self, meta):
+        self.set_font(self.serifFont, style='B', size=self.rosterPt) 
         h = self.lineHeight(self.font_size_pt)
-        line = h * 3
-        tab = 2
-        toWrite = f'{title} Setup'
-        w = self.get_string_width(toWrite)
-        x = self.setHCenter(w)
-        self.set_xy(x, line)
-        self.cell(text=toWrite)
-        line += h * 3
-        x = 2.5
-        h = self.lineHeight(PDF.linePt)
-        for m in meta:
-            self.set_xy(x, line)
-            self.set_font(size=PDF.linePt)
-            self.cell(2, h, text=m[0])
-            if len(m) > 1:
-                setattr(self, m[0], m[1])
-                self.set_xy(x+tab, line)
-                self.set_font(style='I', size=PDF.linePt)
-                self.cell(2*h, h, text=f'{m[1]}', align='R')
-            line += h
-        return
+        x = self.setHCenter(self.get_string_width(meta['Title']))
+        y = self.margin + h
+        self.set_xy(x, y)
+        self.cell(text=meta['Title'])
+        self.set_font(self.sansSerifFont, size=self.bigPt) 
+        h = self.lineHeight(self.font_size_pt)
+        x += h
+        self.set_xy(x, y)
+        for t in meta['Info']:
+            y += h
+            self.set_xy(x, y)
+            self.cell(text=t)
+        return self.get_y()
+
+    # Board tab references its data from the Round tab, for consistency
 
     # part of the meta pagee 
     # Some text for the TD/Organizer
     def instructions(self, log, fname):
         with open(fname, "r") as f:
-            txt = f.read()
-            txt = txt.replace('\n',' ')
-            txt = txt[1:]
+            txt = f.read().splitlines()
+        self.headerFooter()
+        self.set_font(self.serifFont, style='B', size=self.rosterPt) 
+        h = self.lineHeight(self.font_size_pt)
+        x = self.setHCenter(self.get_string_width(txt[0]))
+        y = 2 * h + self.margin
+        self.set_xy(x, y)
+        self.cell(text=txt[0])
         self.set_font(size=PDF.linePt)
         h = self.lineHeight(self.font_size_pt)
         y = self.get_y()+2*h
         nLine = 1
-        lineBreak = txt.find('#')
-        while lineBreak > 0:
-            t = txt[:lineBreak]
-            # wish for a lambda with closure
+        for t in txt[1:]:
+            lineNo = 0
             self.set_xy(1, y)
-            self.cell(h, h, f'{nLine}.', align='R')
+            if t[0] == '#':
+                self.cell(h, h, f'{nLine}.', align='R')
+                lineNo = 1
+                nLine += 1
             self.set_xy(1+h, y)
-            self.multi_cell(self.epw-2, h=h, text=t.strip())
-            y = self.get_y()
-            nLine += 1
-            txt = txt[lineBreak+1:]
-            lineBreak = txt.find('#')
-        if len(txt) > 0:
-            t = txt
-            self.set_xy(1, y)
-            self.cell(h, h, f'{nLine}.', align='R')
-            self.set_xy(1+h, y)
-            self.multi_cell(self.epw-2, h=h, text=t.strip())
+            self.multi_cell(self.epw-2, h=h, text=t[lineNo:].strip())
             y = self.get_y()
 
     # Sign-up sheet
     def roster(self, log, rows, headers):
-        self.add_page() # new page
-        self.footer()
         self.set_font(self.serifFont, style='B', size=PDF.rosterPt) 
         h = self.lineHeight(self.font_size_pt)
-        title = 'Player Pairings'
+        title = 'Players'
         x = self.setHCenter(self.get_string_width(title))
-        self.set_xy(x, 2*h)
+        self.set_xy(x, self.get_y()+2*h)
         self.cell(text=title)
         nCol = len(headers)
         # paper width minus margins from both side, minus the 1st column width

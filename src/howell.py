@@ -34,7 +34,9 @@ class Howell(PairGames):
         return
 
     def save(self):
+        self.Pickups()
         self.Traveler()
+        self.Journal()
         self.IMPTable()
         self.ScoreTable()
         here = os.path.dirname(os.path.abspath(__file__))
@@ -105,8 +107,10 @@ class Howell(PairGames):
 
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
             f'Howell Movement for {self.pairs} Pairs')
-        self.pdf.meta(self.log, ws.title, tourneyMeta)
         self.pdf.instructions(self.log, "instructions.txt")
+        self.pdf.add_page()
+        self.pdf.headerFooter()
+        self.meta(tourneyMeta)
         self.rosterSheet()
 
     # Present the same data table-oriented
@@ -133,11 +137,9 @@ class Howell(PairGames):
                             pdfData[tbl]['nsNext'] = (next[rounds[r][tbl]['NS']], side)
                         if rounds[r][tbl]['EW'] in next.keys():
                             pdfData[tbl]['ewNext'] = (next[rounds[r][tbl]['EW']], side)
-        self.pdf.overview(pdfData)
+        #self.pdf.overview(pdfData)
         self.idTags()
         self.pdf.tableOut(pdfData)
-        self.Pickups()
-        self.Journal()
 
     # Board-oriented view
     # A "board" is really a set of decks in the code.  The number of decks is in
@@ -203,7 +205,7 @@ class Howell(PairGames):
     def rosterSheet(self):
         self.log.debug('Creating Roster Sheet')
         headers = ['Pair #', 'Player 1', 'Player 2', 'IMP', 'MP']
-        self.pdf.roster(self.log, self.pairs, headers[:-1])
+        self.pdf.roster(self.log, self.pairs, headers[:-2])
 
         sh = self.wb.create_sheet('Roster')
         row = self.headerRow(sh, headers)
@@ -282,6 +284,14 @@ class Howell(PairGames):
                 sh.cell(i+4, j+1).border = border
         for c in range(len(headers)):
             sh.column_dimensions[chr(ord('A')+c)].width = colWidthTbl[c]
+
+    # meta information for the tournament
+    def meta(self, tmeta):
+        self.log.debug('PDF meta')
+        pdfMeta = {'Title': tmeta[0][0], 'Info': []}
+        for t in tmeta[1:]:
+            pdfMeta['Info'].append(f'{t[0]} {t[1]}')
+        return self.pdf.meta(pdfMeta)
 
     def go(self):
         #self.saveByRound()

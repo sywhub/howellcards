@@ -68,12 +68,13 @@ class Mitchell(PairGames):
         self.log.debug('Main goes')
         # initData must be the first one
         self.initData()
+        self.pdf.instructions(self.log, 'mitchellInstructions.txt')
         self.roster()
+        self.results()
         self.roundTab()
         self.boardTab()
-        self.results()
-        self.IMPTable()
-        self.ScoreTable()
+        self.IMPTable() # static sheet
+        self.ScoreTable()   # static sheet, produced to aid human TD, not used elsewhere.
         self.idTags()  # PDF only
         self.setTableTexts()  # PDF only
         self.Pickups()  # PDF only
@@ -81,6 +82,7 @@ class Mitchell(PairGames):
         self.Journal()  # PDF only
         self.save()
         return
+
 
     # Generate "boardData" and "roundData"
     def initData(self):
@@ -167,7 +169,6 @@ class Mitchell(PairGames):
         ws.column_dimensions['C'].width = 30
         
     def rosterPDF(self):
-        self.pdf.headerFooter()
         y = self.meta()
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -202,28 +203,13 @@ class Mitchell(PairGames):
     # Not doing meta sheet
     def meta(self):
         self.log.debug('Meta')
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
-        h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        title = 'Mitchell Tournament'
-        x = self.pdf.setHCenter(self.pdf.get_string_width(title))
-        y = self.pdf.margin + h
-        self.pdf.set_xy(x, y)
-        self.pdf.cell(text=title)
-        self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.bigPt) 
-        h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        x += h
-        y += h
-        self.pdf.set_xy(x, y)
-        self.pdf.cell(text=f'{self.pairs} pairs')
-        y += h
-        self.pdf.set_xy(x, y)
-        self.pdf.cell(text=f'{self.pairs // 2 - 1} rounds')
-        y += h
-        self.pdf.set_xy(x, y)
-        self.pdf.cell(text=f'{self.decks} boards per round')
-        y += h
-        self.pdf.set_xy(x, y)
-        return self.pdf.get_y()
+        meta = {'Title': 'Mitchell Tournament', 'Info': []}
+        meta['Info'].append(f'{self.pairs} pairs')
+        meta['Info'].append(f'{self.pairs // 2 - 1} rounds')
+        meta['Info'].append(f'{self.decks} boards per round')
+        self.pdf.add_page()
+        self.pdf.headerFooter()
+        return self.pdf.meta(meta)
 
     # Board tab references its data from the Round tab, for consistency
     # Then it compute the scores on the sheet
@@ -272,6 +258,7 @@ class Mitchell(PairGames):
                 ewText.append(f'Move to Table {t+2 if t < 3 else 1} EW')
                 nsText.append(f'Stay Here, Boards to T{t if t > 0 else 4}')
         else:
+            # The trade-off of square is the iregularity of movements
             ewText = ['R2 to T2/EW, R3 to T3/EW, R4 to T2/EW',
                         'R2 to T1/EW, R3 to T4/EW, R4 to T1/EW',
                         'R2 to T4/EW, R3 to T1/EW, R4 to T4/EW',
@@ -282,6 +269,7 @@ class Mitchell(PairGames):
                         'Stay here. Boards: R2 to T1, R3 to T3, R4 to T1'] 
         self.Tables(nsText, ewText)
 
+    # Square arrangement is not programatic.
     def loadSquare(self):
         self.log.debug('Load Square data')
         self.sqSetup = {
