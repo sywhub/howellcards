@@ -104,42 +104,31 @@ class Mitchell(PairGames):
         self.rosterSheet()
         self.rosterPDF()
     
+    # a notice on public domain
+    # Then the meta info about this tournament
+    # Last a list of names for pairs
     def rosterSheet(self):
         ws = self.wb.active # the first tab
         ws.title = 'Roster'
-        # First simple list of names
-        ws.cell(1, 1).value = self.pdf.headerText
-        # a less noticable color
-        ws.cell(1, 1).font = Font(size=10, italic=True, color="5DADE2")
-        row = 2
-        ws.cell(row, 1).value = "Mitchell Tournament Scoring"
-        ws.cell(row, 1).font = self.HeaderFont
-        ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,5).coordinate}')
-        ws.cell(row, 1).alignment = self.centerAlign
-        row += 1
-        for info in [['Pairs', self.pairs], ['Tables', self.tables], ['Boards per Round', self.decks]]:
-            ws.cell(row, 1).value = info[0]
-            ws.cell(row, 1).font = self.HeaderFont
-            ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,2).coordinate}')
-            ws.cell(row, 3).value = info[1]
-            row += 1
-        row += 1
 
-        
+        tourney = {'Title':"Mitchell Tournament Scoring",
+            'Info': [['Pairs', self.pairs], ['Tables', self.tables], ['Boards per Round', self.decks]]}
+
+        row = self.sheetMeta(ws, tourney) + 2
+        toN = self.pairs + (1 if self.oddPairs else 0)
         for s in range(2):
             ws.cell(row, 1).value =  f'{['NS', 'EW'][s]} Pairs'
             ws.cell(row, 1).font = self.HeaderFont
             ws.cell(row, 1).alignment = self.centerAlign
             ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
-            ws.cell(row, 4).value = '%'
+            ws.cell(row, 4).value = 'MP'
             ws.cell(row, 4).font = self.HeaderFont
             ws.cell(row, 4).alignment = self.centerAlign
             ws.cell(row, 5).value = 'IMP'
             ws.cell(row, 5).font = self.HeaderFont
             ws.cell(row, 5).alignment = self.centerAlign
             row += 1
-            toN = self.pairs + (1 if self.oddPairs else 0)
-            avgStart = row
+            avgStart = row  # remember this row
             for p in range(s, toN, 2):
                 pName = self.pairN(p+1)
                 if pName == self.SITOUT:
@@ -151,6 +140,7 @@ class Mitchell(PairGames):
                 ws.cell(row, 3).value = self.placeHolderName()
                 row += 1
 
+            # draw a line
             for i in range(6):
                 ws.cell(row-1, i+1).border = self.bottomLine
 
@@ -164,7 +154,6 @@ class Mitchell(PairGames):
             ws.cell(row,4).font = self.noChangeFont
             ws.cell(row,5).font = self.noChangeFont
             row += 2
-        row += 2
         ws.column_dimensions['B'].width = 30
         ws.column_dimensions['C'].width = 30
         

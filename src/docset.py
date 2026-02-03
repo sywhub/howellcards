@@ -348,26 +348,34 @@ class PairGames(DupBridge):
             if bIdx % nPerPage == 0:
                 self.pdf.add_page()
                 y = 0.5
-            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, f'Board {b+1} Traveler')
-            y += self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.linePt)
-            h = self.pdf.lineHeight(self.pdf.font_size_pt)
-            for v in r:
-                self.pdf.set_xy(xMargin, y)
-                self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
-                if type(v[2]) == str:
-                    self.pdf.cell(tblCols[1], h, text=v[2], align='C', border=1)
-                else:
-                    self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[2])}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
-                for c in range(3,len(hdrs)):
-                    self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
-                y += h
+            y = self.BoardTraveler(xMargin, tblCols, hdrs, b, r, y)
             bIdx += 1
             if nPerPage > 1:
                 y = self.pdf.sectionDivider(nPerPage, bIdx, xMargin)
+        # print several spare ones
+        while bIdx % nPerPage != 0:
+            # y = self.BoardTraveler(xMargin, tblCols, hdrs, b, r, y, True)
+            bIdx += 1
         return
+
+    def BoardTraveler(self, leftSide, tblCols, hdrs, bdNum, round, y):
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
+        y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Board {bdNum+1} Traveler')
+        y += self.pdf.lineHeight(self.pdf.font_size_pt)
+        self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.linePt)
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        for v in round:
+            self.pdf.set_xy(leftSide, y)
+            self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
+            if type(v[2]) == str:
+                self.pdf.cell(tblCols[1], h, text=v[2], align='C', border=1)
+            else:
+                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[2])}', align='C', border=1)
+            self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
+            for c in range(3,len(hdrs)):
+                    self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
+            y += h
+        return y
 
     def Tables(self, nsTexts, ewTexts):
         tables = {}
@@ -565,3 +573,20 @@ class PairGames(DupBridge):
             for r in range(2,sh.max_row+1):
                 bd = sh.cell(r, c).border
                 sh.cell(r, c).border = Border(left=self.thinLine, bottom=bd.bottom)
+
+    def sheetMeta(self, sh, metaData):
+        sh.cell(1, 1).value = self.pdf.headerText
+        sh.cell(1, 1).font = Font(size=10, italic=True, color="5DADE2")
+
+        sh.cell(2, 1).value = metaData['Title']
+        sh.cell(2, 1).font = self.HeaderFont
+        sh.merge_cells(f'{sh.cell(2,1).coordinate}:{sh.cell(2,5).coordinate}')
+        sh.cell(2, 1).alignment = self.centerAlign
+
+        for row, info in enumerate(metaData['Info'], 3):
+            sh.cell(row, 1).value = info[0]
+            sh.cell(row, 1).font = self.HeaderFont
+            sh.merge_cells(f'{sh.cell(row,1).coordinate}:{sh.cell(row,2).coordinate}')
+            sh.cell(row, 3).value = info[1]
+            sh.cell(row, 3).font = self.HeaderFont
+        return row

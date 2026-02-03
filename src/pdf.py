@@ -8,6 +8,7 @@ class PDF(FPDF):
     thinLine = 1/72/2   # half a point
     starRadius = 1
     anchorFontSize = 72
+    edgePt = 24
     rosterPt = 20
     titlePt = 18
     bigPt = 16
@@ -96,7 +97,7 @@ class PDF(FPDF):
         for t in meta['Info']:
             y += h
             self.set_xy(x, y)
-            self.cell(text=t)
+            self.cell(text=f"{t[0]} {t[1]}")
         return self.get_y()
 
     # Board tab references its data from the Round tab, for consistency
@@ -238,55 +239,6 @@ class PDF(FPDF):
             self.cell(tblCols[w], h, text=headers[w], border=1, align='C')
         return tblCols
 
-    # An 1-page overview of the entire tournament
-    # Table-by-Round with each cell as players and boards to play
-    # Won't fit well in portrait mode
-    def overview(self, data):
-        # font sizes are determined relatively to the amount of data to fit
-        self.add_page(orientation='landscape', format='letter')
-        nCol = len(data.items()) + 1
-        nRow = data[1]['nRound'] + 1
-        colWidth = self.w / nCol
-        rowHeight = (self.h - 2 * self.lineHeight(PDF.rosterPt))/ nRow
-        rowFontSize = rowHeight*72/4+2  # convert to Pt, try to fit two lines into a row
-        if rowFontSize > PDF.rosterPt - 4:
-            rowFontSize = PDF.rosterPt - 4
-        self.set_font(self.serifFont, size=rowFontSize+4)
-        title='Tournament Overview'
-        self.set_xy((self.w - self.get_string_width(title)) / 2, self.margin)
-        self.cell(text=title)
-        self.set_font(self.serifFont, size=rowFontSize+2)
-        x = 0
-        y = self.get_y() + self.lineHeight(self.font_size_pt)
-        self.set_font(self.sansSerifFont, size=rowFontSize)
-        for i in range(len(data)):
-            x += colWidth
-            self.set_xy(x, y)
-            self.cell(w=colWidth, h=rowHeight, text=f'Table {i+1}', align='C')
-
-        x = 0
-        for i in range(data[0]['nRound']):
-            y += rowHeight
-            self.set_xy(x, y)
-            self.cell(w=colWidth, h=rowHeight/2, text=f'Round {i+1}', align='C')
-
-        x = colWidth
-        y = rowHeight + 2 * self.lineHeight(rowFontSize)
-        line = self.lineHeight(self.font_size_pt)
-        savePt = self.font_size_pt
-        for t,v in data.items():    # by table
-            for i in range(v['nRound']):
-                self.set_xy(x, y)
-                self.set_font(self.sansSerifFont, size=savePt, style='')
-                self.cell(w=colWidth, h=line, text=f'{v[i][0]["NS"]} v. {v[i][0]["EW"]}', align='C')
-                self.set_xy(x, y+line)
-                self.set_font(self.fixedWidthFont, style='I', size=savePt - 2)
-                self.cell(w=colWidth, h=line, text=f'Boards {v[i][1]}', align='C')
-                y += rowHeight
-            x += colWidth
-            y = rowHeight + 2 * self.lineHeight(rowFontSize)
-        
-
     def compass(self):
         # fancy compass canvas
         self.set_font(self.serifFont, size=PDF.bigPt)
@@ -318,10 +270,7 @@ class PDF(FPDF):
 
     def movementSheet(self):
         saveFont = self.font_family
-        # Construction lines
-        #self.line(self.w/2,0,self.w/2,self.h)
-        #self.line(0,self.h / 2, self.w, self.h / 2)
-        self.set_font(self.serifFont, style="B", size=24)
+        self.set_font(self.serifFont, style="B", size=self.edgePt)
         edge = self.lineHeight(self.font_size_pt)
         self.angleText('North', 'N', edge)
         self.angleText('East',  'E', edge)

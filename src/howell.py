@@ -34,8 +34,10 @@ class Howell(PairGames):
         return
 
     def save(self):
+        self.idTags()
+        self.movementTables()
+        self.Travelers()
         self.Pickups()
-        self.Traveler()
         self.Journal()
         self.IMPTable()
         self.ScoreTable()
@@ -87,34 +89,21 @@ class Howell(PairGames):
         nRound = self.tourneyData['Rounds']
 
         # meta data
-        tourneyMeta = [['Howell Arrangement (IMP & MP)'],
-            ['Pairs', self.pairs], ['Tables',int((self.pairs + (self.pairs % 2))/ 2)],
-            ['Rounds',nRound], ['Boards per round',self.decks], ['Total Boards to play', self.decks*nRound]]
-
-        ws = self.wb.active
-        ws.title = 'Tournament'
-        ws.cell(1, 1).value = f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.'
-        # a less noticable color
-        ws.cell(1, 1).font = Font(size=10, italic=True, color="5DADE2")
-
-        for row in range(len(tourneyMeta)):
-            ws.cell(row+2, 1).value = tourneyMeta[row][0]
-            ws.cell(row+2, 1).font = self.HeaderFont
-            if len(tourneyMeta[row]) > 1:
-                ws.cell(row+2, 2).value = tourneyMeta[row][1]
-                ws.cell(row+2, 2).font = self.HeaderFont
-        ws.column_dimensions['A'].width = 30
+        tourneyMeta = {'Title': 'Howell Arrangement (IMP & MP)',
+            'Info': [['Pairs', self.pairs], ['Tables',int((self.pairs + (self.pairs % 2))/ 2)],
+            ['Rounds',nRound], ['Boards per round',self.decks], ['Total Boards to play', self.decks*nRound]]}
 
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
-            f'Howell Movement for {self.pairs} Pairs')
+           f'Howell Movement for {self.pairs} Pairs')
+
         self.pdf.instructions(self.log, "instructions.txt")
         self.pdf.add_page()
         self.pdf.headerFooter()
         self.meta(tourneyMeta)
-        self.rosterSheet()
+        self.rosterSheet(tourneyMeta)
 
     # Present the same data table-oriented
-    def saveByTable(self):
+    def movementTables(self):
         self.log.debug('Saving by Table')
         rounds = self.tourneyData['Arrangement']
         nTbl = len(rounds[0])
@@ -137,8 +126,6 @@ class Howell(PairGames):
                             pdfData[tbl]['nsNext'] = (next[rounds[r][tbl]['NS']], side)
                         if rounds[r][tbl]['EW'] in next.keys():
                             pdfData[tbl]['ewNext'] = (next[rounds[r][tbl]['EW']], side)
-        #self.pdf.overview(pdfData)
-        self.idTags()
         self.pdf.tableOut(pdfData)
 
     # Board-oriented view
@@ -148,7 +135,7 @@ class Howell(PairGames):
     def saveByBoard(self):
         rounds = self.tourneyData['Arrangement']
         self.log.debug('Saving by Board')
-        sh = self.wb.create_sheet('By Board', 2)    # insert it as the 2nd sheet
+        sh = self.wb.create_sheet('By Board', 1)    # insert it as the 2nd sheet
         nTbl = len(rounds[0])
         row, headers = self.boardSheetHeaders(sh, nTbl)
 
@@ -163,7 +150,6 @@ class Howell(PairGames):
                         boards[b] = []
                     boards[b].append((r, tbl, p['NS'], p['EW']))
 
-        self.Travelers()
 
         # each iteration advanceds by a set of boards, governed by self.decks
         for b in sorted(boards.keys()): # b is a set of self.decks
@@ -202,16 +188,31 @@ class Howell(PairGames):
 
     # Roster sheet
     # Also the final result
-    def rosterSheet(self):
+    def rosterSheet(self, meta):
         self.log.debug('Creating Roster Sheet')
         headers = ['Pair #', 'Player 1', 'Player 2', 'IMP', 'MP']
         self.pdf.roster(self.log, self.pairs, headers[:-2])
 
-        sh = self.wb.create_sheet('Roster')
-        row = self.headerRow(sh, headers)
+        sh = self.wb.active
+        sh.title = 'Roster'
+        row = self.sheetMeta(sh, meta) + 2
+        sh.cell(row, 1).value =  'Pairs'
+        sh.cell(row, 1).font = self.HeaderFont
+        sh.cell(row, 1).alignment = self.centerAlign
+        sh.merge_cells(f'{sh.cell(row,1).coordinate}:{sh.cell(row,3).coordinate}')
+        sh.cell(row, 4).value = 'MP'
+        sh.cell(row, 4).font = self.HeaderFont
+        sh.cell(row, 4).alignment = self.centerAlign
+        sh.cell(row, 5).value = 'IMP'
+        sh.cell(row, 5).font = self.HeaderFont
+        sh.cell(row, 5).alignment = self.centerAlign
+        row += 1
+
         totalPlayed = int((self.pairs + self.pairs % 2) / 2) * self.decks * (self.pairs - 1)
         for i in range(self.pairs):
             sh.cell(i+row, 1).value = i+1
+            sh.cell(i+row, 1).font = self.HeaderFont
+            sh.cell(i+row, 1).alignment = self.centerAlign
             sh.cell(i+row, 2).value = self.placeHolderName()
             sh.cell(i+row, 3).value = self.placeHolderName()
             sh.column_dimensions['B'].width = 25
@@ -224,13 +225,13 @@ class Howell(PairGames):
             else:
                 IMPsum2=0
                 MPsum2=0
-            sh.cell(i+row, 4).value = f"{IMPsum1}+{IMPsum2}"
-            sh.cell(i+row, 4).number_format = '#0.00'
-            sh.cell(i+row, 5).value = f"{MPsum1}/{self.decks*(self.pairs-1)}+{MPsum2}/{self.decks*(self.pairs-1)}"
-            sh.cell(i+row, 5).number_format = '0.0%'
+            sh.cell(i+row, 4).value = f"{MPsum1}/{self.decks*(self.pairs-1)}+{MPsum2}/{self.decks*(self.pairs-1)}"
+            sh.cell(i+row, 4).number_format = '0.0%'
+            sh.cell(i+row, 5).value = f"{IMPsum1}+{IMPsum2}"
+            sh.cell(i+row, 5).number_format = '#0.00'
         
         IMPRow = self.pairs + row + 2
-        sh.cell(IMPRow, 1).value = 'Array Formula below, remove single quote'
+        sh.cell(IMPRow, 1).value = 'To sort, remove single quote below'
         IMPRow += 1
         sh.cell(IMPRow,1).value = 'IMP Ranking'
         sh.cell(IMPRow,1).alignment = self.centerAlign
@@ -255,49 +256,24 @@ class Howell(PairGames):
         # Check to make sure IMPs add up to zero
         ft = Font(bold=True,color="FF0000")
         topBorder = Border(top=Side(style='thin', color="FF0000"))
-        sh.cell(self.pairs+2, 4).value=f'=SUM(D2:D{self.pairs+1})'
-        sh.cell(self.pairs+2, 4).number_format = '#0.00'
-        sh.cell(self.pairs+2, 5).value=f'=AVERAGE(E2:E{self.pairs+1})'
-        sh.cell(self.pairs+2, 5).number_format = '0.00%'
-        sh.cell(self.pairs+2, 4).font = ft
-        sh.cell(self.pairs+2, 4).border = topBorder
-        sh.cell(self.pairs+2, 5).font = ft
-        sh.cell(self.pairs+2, 5).border = topBorder
-
-    def Traveler(self):
-        self.log.debug('Creating Traveler Template Sheet')
-        headers = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
-        colWidthTbl = [8, 8, 8, 30, 8, 10, 8, 8]
-        sh = self.wb.create_sheet('Traveler Template')
-        sh.cell(1, 1).value = 'Board #'
-        titleFont = Font(size=self.HeaderFont.size + 8, bold=True)
-        sh.cell(1, 1).font = titleFont
-        sh.merge_cells(f'{sh.cell(1,1).coordinate}:{sh.cell(1,len(headers)).coordinate}')
-        row = self.headerRow(sh, headers, 3)
-        side=Side(style='thin',color='000000')
-        border=Border(top=side,left=side,bottom=side,right=side)
-        for i in range(self.pairs - 1):
-            sh.cell(i+4, 1).value = i+1
-            sh.cell(i+4, 1).alignment = self.centerAlign
-            sh.cell(i+4, 1).font = self.HeaderFont
-            for j in range(len(headers)):
-                sh.cell(i+4, j+1).border = border
-        for c in range(len(headers)):
-            sh.column_dimensions[chr(ord('A')+c)].width = colWidthTbl[c]
+        sh.cell(self.pairs+row, 4).value=f'=AVERAGE(D{row}:D{row+self.pairs-1})'
+        sh.cell(self.pairs+row, 4).number_format = '0.00%'
+        sh.cell(self.pairs+row, 5).value=f'=SUM(E{row}:E{row+self.pairs-1})'
+        sh.cell(self.pairs+row, 5).number_format = '#0.00'
+        sh.cell(self.pairs+row, 4).font = ft
+        sh.cell(self.pairs+row, 4).border = topBorder
+        sh.cell(self.pairs+row, 5).font = ft
+        sh.cell(self.pairs+row, 5).border = topBorder
 
     # meta information for the tournament
-    def meta(self, tmeta):
+    def meta(self, metaData):
         self.log.debug('PDF meta')
-        pdfMeta = {'Title': tmeta[0][0], 'Info': []}
-        for t in tmeta[1:]:
-            pdfMeta['Info'].append(f'{t[0]} {t[1]}')
-        return self.pdf.meta(pdfMeta)
+        return self.pdf.meta(metaData)
 
     def go(self):
         #self.saveByRound()
-        self.roundTab()
-        self.saveByTable()
         self.saveByBoard()
+        self.roundTab()
         self.save()
 
 def howellFromJson(log, pairs, fake, jsonfile):
