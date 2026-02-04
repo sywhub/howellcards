@@ -1,6 +1,8 @@
 No Right reserved.  All files are in public domain.  Author claims no responsbility for using any of the files.
 # TOC
-This directory contains necessary PDF and Excel files for team tournament and various Howell tournaments.
+This directory contains necessary PDF and Excel files for various styles of Bridge
+tournaments.  They are designed for "small" tournaments organized by amateur directors.  For
+large events, people typically use ACBL tools.
 The files come in pairs with matching names differ only by their extention of "PDF" or "xlsx".  The diretor should print out the PDF file ahead of the time.
 
 # Team Match
@@ -8,29 +10,72 @@ This is a simple 2-table team match setup.  The expectation is 2 pairs per team 
 
 You can change the format for # of rounds, boards per round, and switches per round.
 
-# Howell Movement Cards and Scoring Spreadsheet
+# Mitchell Movement
+Mitchell Movement is a very popular format for relatively large participants.  In this
+style, the players are separated into the "North-South" group and "East-West".  At the end,
+rankings are among the groups and there will be 2 winning pairs.
+Mitchell movements are straight-forward.
 
-Here we have the necessary documents to conduct a Bridge Howell tournament for 6 to 14 pairs (3 to 7 tables).  They are meant for the tournament director (TD) and/or organizer, not the tournament contesters.
+# Howell Movement 
+Unlike Mitchell, Howell movements have all pairs play against all other pairs and generating
+one winning pair. Both the player and board movements are more complex.  For Howell, the
+"movement cards" are critically important for the game.
 
-## Which files do you need?
+# Which files do you need?
+For Howell, you need a PDF and a Spreadsheet files of matching names.  The spreadsheet makes
+scoring easier.
 
-There are two files for each tournament size (the number of pairs pariticipating the tournament).  They are named howell_x.pdf and howell_x.xlsx, where "x" is the number of pairs.  We do not support Howell tournaments less than 6 pairs or greater than 14.  Tournaments less than 6 pairs probably should just go for team format.  Those for greater than 14 should probably adopt Mitchell style movements.
+For Mitchell, the same.  Except that not all possible Mitchell files were pre-generated.  We
+only generate the necessary files for 8, 9, or 10 pairs and 3 boards per round.  For any
+other combinations of number of pairs and number of rounds, you need to run the Python
+program and provide it with the the command-line options.
 
-## Tournament Operations
+## The Spreadsheet
+Record scores in either the "By Board" or "By Round" tab, but not both.  If "By Round" is
+chosen, the "By Board" tab fetches the data and compute the scores automatically.  If "By
+Board" was used, the "By Round" tab is not used.
 
-Prior to the tournament, print out the PDF file, and scissor the name tags and traveler sheets along the dotted line.  Tape the movement instruction sheets at the center of each table, facing the same direction.  Its best to arrange the tables either clock- or counter-clock-wise.
+The "Roster" tab is the summary of all boards played and provide the final results in both
+MP and IMP.
 
-Assign pair id number to each pair.  For even-numbered tournaments, and if one pair is movement challenged, assign them the highest pair number.  For odd-numbered tournaments, there's a _phantom_ "pair 0" to make it even.  In that case, table 1 will be the sit-out table. In reality, the tournament director does not need to setup a physical table to accomodate the sit-out pair.  The sitting out pair usually just find a comfortable place to kill the time.
+# Tournament Operation
+Prior to the tournament, decide which way to keep score.  Most tournaments choose to use
+"traveler" sheet that goes with each board.  Some use the "pickup slip" tha the director
+collects at the end of each round.  There's no need to do both.
 
-For even-numbered tournaments, the highest number pair sits at table 1, North-South, as the statioary pair. All other pairs move to to a new position after each round as instructed on the movement card taped on the table.  The program arranges the new position to be where the lowered numbered pair sat at the previous round.  (Pair 1 moves to where pair n-1 sat.)
+With the above choice, leave out the unnecesary pages from the PDF file.
 
-Somehow, shuffle and deal decks and tuck hands into boards.  Fold and attach the traveler sheets to each board.  (The convention is to tuck it at the North slot.)  Keep the boards and not putting them on the tables to avoid distracting the participants.
+The PDF file has several sections:
+## The sign-up sheet
+One single page for players to sign-up.  I recommend pre-assign the pair numbers to
+participants prior to the tournament.
 
-Announce to the room the general etiquette: South fetches/deposits the board before and after each round, North record the results on the traveler sheet.  Each pair moves to the next table/position according to the instructions on the table.
+## ID Tags
+These are for each individual players to carry with themselves as guides in the tournament.
+It is provided only for the convenience for them, not used by the director.
 
-Distribute the boards to taables and begin the tournament. Hopefully, everything just go smoothly.  Collect all travelers and record them into the spreadsheet.  The result shows up on the "roster" tab immediately.
+## Movement Cards
+These are to be taped on each table facing the same direction.  It provides necessary
+information for the tournament.  It is the most imporant part of the document set.
 
-## Historical Trivials
+## The Travelers
+One slip for each board.  The round number, opposing pairs, and board numbers are
+pre-printed for convinience.  Many tournaments use standard ACBL travelers.  There is no
+real difference.
+
+## The Pickup Slips
+One slip per table and per eround.  The directors should collect them at the end of each
+round.  There is no need to use both traveler and pickup slips.
+
+## Player Journals
+There's one for each pair to record the play history of their plays.  This is the redundant
+information to corroborate with either the travelers or the pickup slips.  Whenever there
+are errors, these data can help to discern the correct outcome of the play.  The director
+should collect these at the end of the tournament.
+
+The use of player journals is optional, particularly among experience players.
+
+# History
 
 Edwin Howell is credited for Howell movement.  In late 1800s, he invented it for the game of Whist, the prececessor to bridge.  It is probably the most popular "single winner" pair-wise tournament style.  The other major pair-wise tournament styles are Mitchell and Swiss.  Mitchell is "multiple winners" and Swiss arranges each round based on the result of the previous one.
 
