@@ -89,7 +89,7 @@ class Howell(PairGames):
         nRound = self.tourneyData['Rounds']
 
         # meta data
-        tourneyMeta = {'Title': 'Howell Arrangement (IMP & MP)',
+        metaData = {'Title': 'Howell Tournament',
             'Info': [['Pairs', self.pairs], ['Tables',int((self.pairs + (self.pairs % 2))/ 2)],
             ['Rounds',nRound], ['Boards per round',self.decks], ['Total Boards to play', self.decks*nRound]]}
 
@@ -99,8 +99,8 @@ class Howell(PairGames):
         self.pdf.instructions(self.log, "instructions.txt")
         self.pdf.add_page()
         self.pdf.headerFooter()
-        self.meta(tourneyMeta)
-        self.rosterSheet(tourneyMeta)
+        self.pdf.meta(metaData)
+        self.rosterSheet(metaData)
 
     # Present the same data table-oriented
     def movementTables(self):
@@ -109,24 +109,29 @@ class Howell(PairGames):
         nTbl = len(rounds[0])
         nRounds = len(rounds)
         # tbl#: {'nRound': # of rounds, r: ({'NS': ns, 'EW': ew, 'Board': board set #}, "boards set")}
-        pdfData = {}
+        moveData = {}
         # iterate by table then by round
         for tbl in range(nTbl):
-            pdfData[tbl] = {'nRound': nRounds}
+            moveData[tbl] = {}
             for r in range(nRounds):
-                # Simply referene the "By Round" sheet
-                pdfData[tbl][r] = (rounds[r][tbl], self.boardSet(rounds[r][tbl]['Board']))
-                # The movement, which table/seat for the next round
                 if r != nRounds - 1:
                     for side in ['NS', 'EW']:
                         # build a reverse lookup of "side: table" of next round
                         next = {v[side]: k for k,v in enumerate(rounds[r+1])}
                         # look up the pair im that side's lookup
                         if rounds[r][tbl]['NS'] in next.keys():
-                            pdfData[tbl]['nsNext'] = (next[rounds[r][tbl]['NS']], side)
+                            moveData[tbl]['nsNext'] = (next[rounds[r][tbl]['NS']], side)
                         if rounds[r][tbl]['EW'] in next.keys():
-                            pdfData[tbl]['ewNext'] = (next[rounds[r][tbl]['EW']], side)
-        self.pdf.tableOut(pdfData)
+                            moveData[tbl]['ewNext'] = (next[rounds[r][tbl]['EW']], side)
+        nsText = []
+        ewText = []
+        for t in sorted(moveData.keys()):    # tables
+            if t == 0:
+                nsText.append('Stay Stationary')
+            else:
+                nsText.append(f'Move To Table {moveData[t]['nsNext'][0]+1} {moveData[t]['nsNext'][1]}')
+            ewText.append(f'Move To Table {moveData[t]['ewNext'][0]+1} {moveData[t]['ewNext'][1]}')
+        self.Tables(nsText, ewText)
 
     # Board-oriented view
     # A "board" is really a set of decks in the code.  The number of decks is in
@@ -184,14 +189,12 @@ class Howell(PairGames):
                 sh.cell(row-1, c+1).border = self.bottomLine
         self.boardVerticals(sh, headers, nTbl)
 
-
-
     # Roster sheet
     # Also the final result
     def rosterSheet(self, meta):
         self.log.debug('Creating Roster Sheet')
         headers = ['Pair #', 'Player 1', 'Player 2', 'IMP', 'MP']
-        self.pdf.roster(self.log, self.pairs, headers[:-2])
+        self.rosterPDF(headers[:-2])
 
         sh = self.wb.active
         sh.title = 'Roster'
@@ -265,13 +268,40 @@ class Howell(PairGames):
         sh.cell(self.pairs+row, 5).font = ft
         sh.cell(self.pairs+row, 5).border = topBorder
 
-    # meta information for the tournament
-    def meta(self, metaData):
-        self.log.debug('PDF meta')
-        return self.pdf.meta(metaData)
+    # Sign-up sheet
+    def rosterPDF(self, headers):
+        rows = self.pairs
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        title = 'Players'
+        x = self.pdf.setHCenter(self.pdf.get_string_width(title))
+        self.pdf.set_xy(x, self.pdf.get_y()+2*h)
+        self.pdf.cell(text=title)
+        nCol = len(headers)
+        # paper width minus margins from both side, minus the 1st column width
+        # divide the rest evenly.
+        xstart = 1  # left edge
+        colWidth = (self.pdf.epw - xstart * 3 ) / (nCol - 1)
+        tblCols = [colWidth]*(nCol - 1)
+        tblCols.insert(0, xstart)
+        self.pdf.set_font(style='B', size=self.pdf.rosterPt) 
+        y = self.pdf.get_y() + h * 3   # go down 3 lines
+        x = xstart
+        self.pdf.set_xy(x, y)
+        for i in range(nCol):
+            self.pdf.cell(tblCols[i], h, headers[i], align='C', border=1)
+        y += h
+        self.pdf.set_xy(xstart, y)
+        self.pdf.set_font(self.pdf.sansSerifFont, style='', size=self.pdf.headerPt)
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        for i in range(rows):
+            self.pdf.cell(tblCols[0], h, f'{i+1}', align='C', border=1)
+            for j in range(1, nCol):
+                self.pdf.cell(tblCols[j], h, '', align='C', border=1)
+            y += h
+            self.pdf.set_xy(xstart, y)
 
     def go(self):
-        #self.saveByRound()
         self.saveByBoard()
         self.roundTab()
         self.save()
