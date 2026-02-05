@@ -89,7 +89,9 @@ class Mitchell(PairGames):
         self.boardData = {}
         if self.pairs == 8:
             self.loadSquare()   # squaure Mitchell
-        else:   # standard Mitchell
+        elif self.tables % 2 == 0: 
+            self.loadEven() # self.pairs in [11, 12, 15, 16]
+        else:  # standard Mitchell
             for r in range(self.tables): # round
                 for t in range(self.tables): # table
                     b = self.boardIdx(r, t)
@@ -97,7 +99,8 @@ class Mitchell(PairGames):
                         if (b + bset) not in self.boardData:
                             self.boardData[b+bset] = []
                         self.boardData[b+bset].append((r, t, self.NSPair(r, t), self.EWPair(r, t)))
-        self.initRounds()
+        if not hasattr(self, 'roundData'):
+            self.initRounds()
 
     def roster(self):
         self.log.debug('Roster sheet and PDF')
@@ -170,7 +173,7 @@ class Mitchell(PairGames):
         y +=  h
         leftM = (self.pdf.w - sum(widths)) / 2
         self.pdf.set_xy(leftM, y)
-        self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.bigPt) 
+        self.pdf.set_font(self.pdf.sansSerifFont, size=(self.pdf.bigPt if self.pairs < 19 else self.pdf.linePt)) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         start = 2
         for s in ['NS', 'EW']:
@@ -193,9 +196,12 @@ class Mitchell(PairGames):
     def meta(self):
         self.log.debug('Meta')
         meta = {'Title': 'Mitchell Tournament', 'Info': []}
-        meta['Info'].append(f'{self.pairs} pairs')
-        meta['Info'].append(f'{self.pairs // 2 - 1} rounds')
-        meta['Info'].append(f'{self.decks} boards per round')
+        meta['Info'].append(('Pairs', self.pairs))
+        meta['Info'].append(('Tables', self.tables))
+        if self.tables % 2 == 0:
+            meta['Info'].append(('Relay between ', f"{self.tables // 2} and {self.tables // 2 + 1}"))
+        meta['Info'].append(('Rounds', self.pairs // 2 - 1))
+        meta['Info'].append(('Boards per round', self.decks))
         self.pdf.add_page()
         self.pdf.headerFooter()
         return self.pdf.meta(meta)
@@ -207,7 +213,7 @@ class Mitchell(PairGames):
         sh = self.wb.create_sheet('By Board', 1)
         row, headers = self.boardSheetHeaders(sh, self.tables)
         rGap = self.tables * self.decks    # Number of rows between each round
-        for b in self.boardData.keys():
+        for b in sorted(self.boardData.keys()):
             sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign
             nPlayed = len(self.boardData[b])    # # of times this board was played
@@ -240,13 +246,7 @@ class Mitchell(PairGames):
 
     def setTableTexts(self):
         self.log.debug('Setting Table borders')
-        if self.pairs != 8:
-            nsText = []
-            ewText = []
-            for t in range(self.tables):
-                ewText.append(f'Move to Table {t+2 if t < 3 else 1} EW')
-                nsText.append(f'Stay Here, Boards to T{t if t > 0 else 4}')
-        else:
+        if self.pairs == 8:
             # The trade-off of square is the iregularity of movements
             ewText = ['R2 to T2/EW, R3 to T3/EW, R4 to T2/EW',
                         'R2 to T1/EW, R3 to T4/EW, R4 to T1/EW',
@@ -256,6 +256,15 @@ class Mitchell(PairGames):
                         'Stay here. Boards: R2 to T3, R3 to T1, R4 to T3', 
                         'Stay here. Boards: R2 to T2, R3 to T4, R4 to T2', 
                         'Stay here. Boards: R2 to T1, R3 to T3, R4 to T1'] 
+        else:
+            nsText = []
+            ewText = []
+            for t in range(self.tables):
+                ewText.append(f'Move to Table {t+2 if t < 3 else 1} EW')
+                if self.tables % 2 == 0 and t == self.tables // 2:
+                    nsText.append(f'Stay Here, Boards to Relay')
+                else:
+                    nsText.append(f'Stay Here, Boards to T{t if t > 0 else 4}')
         self.Tables(nsText, ewText)
 
     # Square arrangement is not programatic.
@@ -291,6 +300,27 @@ class Mitchell(PairGames):
                     if b not in self.boardData:
                         self.boardData[b] = []
                     self.boardData[b].append((r['Round'], t, r['NS'], r['EW']))
+
+    def loadEven(self):
+        self.roundData = {}
+        for r in range(self.tables):
+            self.roundData[r] = {}
+            for t in range(self.tables):
+                self.roundData[r][t] = []
+                bIdx = t if t <= 2 else t + 1
+                bIdx += r
+                if bIdx > self.tables:
+                    bIdx -= self.tables + 1
+                blist = [self.decks*bIdx+x for x in range(self.decks)]
+                self.roundData[r][t] = {'NS': self.NSPair(r, t), 'EW': self.EWPair(r,t), 'Board': blist}
+        self.boardData = {}
+        for r,tbl in self.roundData.items():
+            for t,d in tbl.items():
+                for b in d['Board']:
+                    if b not in self.boardData:
+                        self.boardData[b] = []
+                    self.boardData[b].append((r, t, d['NS'], d['EW']))
+
 
     def results(self):
         self.log.debug('Add results to Roster')
@@ -332,14 +362,14 @@ if __name__ == '__main__':
     log = setlog('mitchell', None)
     def mitchell_check(value):
         ivalue = int(value)
-        if ivalue in [11,12,15,16]:
+        if ivalue in [11,15,16]:
             raise argparse.ArgumentTypeError(f"Cannot have even number of tables")
         return ivalue
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
     parser.add_argument('-b', '--boards', type=int, choices=range(1,7), default=4, help='Boards per round')
-    parser.add_argument('-p', '--pair', type=mitchell_check, choices=range(8,19), default=8, help='Number of pairs')
+    parser.add_argument('-p', '--pair', type=int, choices=range(8,25), default=8, help='Number of pairs')
     parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:

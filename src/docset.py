@@ -157,10 +157,10 @@ class DupBridge:
 
     def rc2a1(self, r, c):
         col = ''
-        if c > 26:
-            col = 'A'
-            c -= 26
-        col += chr(c-1+ord('A'))
+        c -= 1
+        if c >= 26:
+            col = chr(ord('A') + c // 26 - 1)
+        col += chr(c%26+ord('A'))
         return f"{col}{r}"
 
     def vulLookup(self, bidx):
@@ -398,6 +398,7 @@ class PairGames(DupBridge):
         top = self.pdf.pt2in(self.pdf.bigPt) * 2.5 + 1
         compassTop = self.pdf.h - (self.pdf.pt2in(self.pdf.bigPt) * 5 + self.pdf.starRadius + 2)
 
+        fontSize = self.pdf.rosterPt if len(tables) < 10 else self.pdf.bigPt
         for t in sorted(tables.keys()):
             if self.ifSitout(t, tables[t][0][0]['NS'], tables[t][0][0]['EW']):
                 continue
@@ -408,9 +409,9 @@ class PairGames(DupBridge):
             self.pdf.tableAnchors(f"{t+1}")
             if nsTexts != None and ewTexts != None:
                 self.pdf.inkEdgeText(nsTexts[t], ewTexts[t])
-            self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.rosterPt)
+            self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=fontSize)
             self.pdf.headerRow(xMargin, top, tblCols, hdrs, ' ')
-            self.pdf.set_font(size=self.pdf.rosterPt)
+            self.pdf.set_font(size=fontSize)
             y = self.pdf.get_y()
             h = self.pdf.lineHeight(self.pdf.font_size_pt);
             self.pdf.set_xy(xMargin, y + h)
@@ -590,3 +591,9 @@ class PairGames(DupBridge):
             sh.cell(row, 3).value = info[1]
             sh.cell(row, 3).font = self.HeaderFont
         return row
+
+
+if __name__ == '__main__':
+    pgame = PairGames(None)
+    for c in range(25,100):
+        print(f"{c}: {pgame.rc2a1(1,c)}")
