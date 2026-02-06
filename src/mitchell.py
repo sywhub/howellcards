@@ -99,8 +99,7 @@ class Mitchell(PairGames):
                         if (b + bset) not in self.boardData:
                             self.boardData[b+bset] = []
                         self.boardData[b+bset].append([r, t, self.NSPair(r, t), self.EWPair(r, t)])
-        if not hasattr(self, 'roundData'):
-            self.initRounds()
+        self.initRounds()
 
     def roster(self):
         self.log.debug('Roster sheet and PDF')

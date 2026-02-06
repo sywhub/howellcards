@@ -48,7 +48,7 @@ class Howell(PairGames):
         print(f'Saved {fn}.{{xlsx,pdf}}')
 
     def pairN(self, n):
-        return n
+        return n if n != 0 else self.SITOUT
 
     def pairID(self, n):
         return f"{n if n != 0 else self.SITOUT}"

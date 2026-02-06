@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-# Mainly spreadsheet class to Howell tournaments into Excel templates
-# Also produce PDF file the event
-from openpyxl import Workbook
+# Base classes for bridge tournament arrangements
+# These classes depend on the data set generated offline.
+#
 from openpyxl.styles import Font, Alignment, Border, Side
-from openpyxl.worksheet.formula import ArrayFormula
-import pdf
 import random
-import datetime
-import os
 
 class DupBridge:
     def __init__(self, log):
@@ -19,6 +15,7 @@ class DupBridge:
         self.mediumLine = Side(style='medium',color="000000")
         self.thinTop = Border(top=self.thinLine)
         self.thinLeft = Border(left=self.thinLine)
+        self.HeaderFont = Font(bold=True, size=14)
         self.fake = False
 
     # IMP conversion table
@@ -37,8 +34,6 @@ class DupBridge:
     # (Default) 1st row as the header
     # return the next row for data
     def headerRow(self, sh, headers, row = 1):
-        if not hasattr(self, 'HeaderFont'):
-            self.HeaderFont = Font(bold=True, size=14)
         col = 1
         for h in headers:
             sh.cell(row, col).font = self.HeaderFont
@@ -51,11 +46,9 @@ class DupBridge:
                 sh.merge_cells(mRange)
                 col += h[1] - 1
             col += 1
-        try:
+        if 'Contract' in headers:
             contractCol = headers.index('Contract')
             sh.column_dimensions[chr(ord('A')+contractCol)].width = 30;
-        except ValueError:
-            pass
 
         return row + 1
 
@@ -167,19 +160,24 @@ class DupBridge:
         vulShift = bidx // 4
         return ['None', 'NS', 'EW', 'Both'][(bidx + vulShift) % 4]
 
+# Howell and Mitchell tournaments
 class PairGames(DupBridge):
     def __init__(self, log):
         super().__init__(log)
         self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
-        self.bottomLine = Border(bottom=Side(style='thin', color='000000'))
+        self.bottomLine = Border(bottom=self.thinLine)
         self.SITOUT = "Sit-Out"
+        self.roundData = {} # meant to be write-once
+        self.boardData = {} # meant to be write-once
 
+    # Placeholder functions, expect to be over-written by child classes
+    # Turn internal pair number to human readable value
     def pairN(self, n):
         return n + 1
 
-    # turn pair number to readable ID
+    # turn pair number to string
     def pairID(self, n):
-        return f"{n+1}"
+        return f"{self.pairN(n)}"
     
 
     def fakeScore(self, sh, row, col):
@@ -191,9 +189,9 @@ class PairGames(DupBridge):
             sh.cell(row, col).value = 'Avg'
             sh.cell(row, col+1).value = 'Avg'
 
+    # Construct "roundData" from "boardData"
     def initRounds(self):
         # A convenient restructure
-        self.roundData = {}
         for b,bset in self.boardData.items():
             for s in bset:
                 if s[0] not in self.roundData:   # round
@@ -202,11 +200,15 @@ class PairGames(DupBridge):
                     self.roundData[s[0]][s[1]] = {'NS': s[2], 'EW': s[3], 'Board': []}
                 self.roundData[s[0]][s[1]]['Board'].append(b)
 
+    # Generate spreadsheet tab of "By Round" based on "roundData"
+    # Both Howell and Mitchell classes will first generate their own
+    # "boardData" and "roundData". After that, this sheet is generic.
     def roundTab(self):
         self.log.debug('Saving by Round')
-        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
-        sh, startRow = self.contractHeaders(headers, 'By Round', ['Scores'])
-        row = startRow
+        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', ['Scores', 2]]
+        sh = self.wb.create_sheet('By Round', 2)
+        row = self.headerRow(sh, headers, 1)
+        startRow = row
         for r in sorted(self.roundData.keys()): # round
             sh.cell(row, 1).value = r+1
             sh.cell(row, 1).alignment = self.centerAlign
@@ -228,21 +230,11 @@ class PairGames(DupBridge):
                 self.fakeScore(sh, i, headers.index('Result')+2)
         return
 
-    def contractHeaders(self, hdrs, tabName, merges, tabIdx=2):
-        sh = self.wb.create_sheet(tabName, tabIdx)
-        sCol = hdrs.index('Result')+2
-        for i in range(len(merges)):
-            sh.cell(1, sCol).value = merges[i]
-            sh.merge_cells(f'{self.rc2a1(1, sCol)}:{self.rc2a1(1, sCol+1)}')
-            sh.cell(1, sCol).font = self.HeaderFont
-            sh.cell(1, sCol).alignment = self.centerAlign
-            sCol += 2
-        row = self.headerRow(sh, hdrs, 2)
-        sh.column_dimensions[chr(hdrs.index('Contract')+ord('A'))].width = 30
-        return sh, row
-
+    # Pickup Slip is PDF only
+    # They are scores kept on "per round" basis.  There's a slip for each table for each round.
+    # This is the ACBL style pickup slips with information pre-filled in.
     def Pickups(self):
-        # rearrange by tables
+        # Temporary data structure for ease of coding
         tables = {}
         for b,r in self.boardData.items():
             for v in r:
@@ -262,41 +254,57 @@ class PairGames(DupBridge):
         tblCols[5] += extraW
         bIdx = 0
         for t in sorted(tables.keys()):
-            if (hasattr(self, 'oddPairs') and self.oddPairs and t == len(tables.keys()) - 1):
-                continue
+            # the sit-out table
             for r in sorted(tables[t].keys()):
-                x = tables[t][r][0]
-                if self.pairN(x['NS']) == 0:
+                nsPair = tables[t][r][0]['NS']
+                ewPair = tables[t][r][0]['EW']
+                if self.ifSitout(t, nsPair, ewPair):
                     continue
                 if bIdx % 4 == 0:
                     self.pdf.add_page()
                     y = 2 * self.pdf.margin
                 self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-                title = f"Table {t+1}, Round {r+1}, NS: {self.pairN(x["NS"])}, EW: {self.pairN(x["EW"])}"
-                y += self.pdf.lineHeight(self.pdf.font_size_pt)
-                self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
-                y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, title)
-                self.pdf.set_font(size=self.pdf.linePt)
-                h = self.pdf.lineHeight(self.pdf.font_size_pt)
-                y += h
-                self.pdf.set_xy(xMargin, y)
-                for b in tables[t][r]:
-                    for i in range(4):
-                        self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
-                    self.pdf.cell(tblCols[4], h, text=f'{b["Board"]+1}', align='C', border=1)
-                    for i in range(5,len(hdrs)):
-                        self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
-                    y += h
-                    self.pdf.set_xy(xMargin, y)
+                title = f"Table {t+1}, Round {r+1}, NS: {self.pairN(nsPair)}, EW: {self.pairN(ewPair)}"
+                self.printPickup(title, tables[t][r], tblCols, hdrs, xMargin, y)
                 bIdx += 1
                 y = self.pdf.sectionDivider(4, bIdx, xMargin)
+
+        nExtra = 4 - len(tables) % 4
+        for _ in range(nExtra):
+            if bIdx % 4 == 0:
+                self.pdf.add_page()
+                y = 2 * self.pdf.margin
+            title = f"Table {" "*3}, Round {" "*3}, NS: {" "*3}, EW: {" "*3}"
+            self.printPickup(title, ['']*len(tables[0][0]), tblCols, hdrs, xMargin, y)
+            bIdx += 1
+            y = self.pdf.sectionDivider(4, bIdx, xMargin)
         return
+
+    def printPickup(self, title, boards, tblCols, hdrs, xMargin, y):
+        y += self.pdf.lineHeight(self.pdf.font_size_pt)
+        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
+        y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, title)
+        self.pdf.set_font(size=self.pdf.linePt)
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        y += h
+        self.pdf.set_xy(xMargin, y)
+        boardCol = hdrs.index('Board')
+        for b in boards:
+            for i in range(boardCol):
+                self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
+            bText = f'{b["Board"]+1}' if type(b) != str else b
+            self.pdf.cell(tblCols[4], h, text=bText, align='C', border=1)
+            for i in range(boardCol+1,len(hdrs)):
+                self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
+            y += h
+            self.pdf.set_xy(xMargin, y)
 
     def Journal(self):
         pairData = {}
-        for b,r in self.boardData.items():
-            for v in r:
-                for p in range(2,4):
+        pairIdx = [2, 3]
+        for b,r in self.boardData.items():  # board and rounds
+            for v in r: # each round is (round, table, NS, and EW)
+                for p in pairIdx: # NS and EW pairs in "v"
                     if v[p] not in pairData:
                         pairData[v[p]] = []
                     pairData[v[p]].append((v[0], b, v[1], v[2], v[3])) # (round, board, table, NS, EW)
@@ -307,7 +315,7 @@ class PairGames(DupBridge):
         hdrs = ['Round', 'Board', 'Sit-Out', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        hdrs[2] = 'NS'
+        hdrs[2] = 'NS'  # used "sit-out" to make sure sufficient width
         for p in sorted(pairData.keys()):
             if self.pairID(p) == self.SITOUT:
                 continue
