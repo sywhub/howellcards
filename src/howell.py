@@ -84,7 +84,7 @@ class Howell(PairGames):
                 for b in self.boardList(tbl['Board']):
                     if b not in self.boardData:
                         self.boardData[b] = []
-                    self.boardData[b].append((r, t, tbl['NS'], tbl['EW']))
+                    self.boardData[b].append([r, t, tbl['NS'], tbl['EW']])
         self.initRounds()
         nRound = self.tourneyData['Rounds']
 

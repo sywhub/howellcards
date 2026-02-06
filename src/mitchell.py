@@ -98,7 +98,7 @@ class Mitchell(PairGames):
                     for bset in range(self.decks):
                         if (b + bset) not in self.boardData:
                             self.boardData[b+bset] = []
-                        self.boardData[b+bset].append((r, t, self.NSPair(r, t), self.EWPair(r, t)))
+                        self.boardData[b+bset].append([r, t, self.NSPair(r, t), self.EWPair(r, t)])
         if not hasattr(self, 'roundData'):
             self.initRounds()
 
@@ -299,7 +299,7 @@ class Mitchell(PairGames):
                 for b in r['Board']:
                     if b not in self.boardData:
                         self.boardData[b] = []
-                    self.boardData[b].append((r['Round'], t, r['NS'], r['EW']))
+                    self.boardData[b].append([r['Round'], t, r['NS'], r['EW']])
 
     def loadEven(self):
         self.roundData = {}
@@ -319,7 +319,7 @@ class Mitchell(PairGames):
                 for b in d['Board']:
                     if b not in self.boardData:
                         self.boardData[b] = []
-                    self.boardData[b].append((r, t, d['NS'], d['EW']))
+                    self.boardData[b].append([r, t, d['NS'], d['EW']])
 
 
     def results(self):

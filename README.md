@@ -14,7 +14,12 @@ You can change the format for # of rounds, boards per round, and switches per ro
 Mitchell Movement is a very popular format for relatively large participants.  In this
 style, the players are separated into the "North-South" group and "East-West".  At the end,
 rankings are among the groups and there will be 2 winning pairs.
-Mitchell movements are straight-forward.
+Mitchell movements are straight-forward: NS pairs stay stationary, EW pairs move "up" to the table one less than the current one after each round, boards move "down" to the higher numbered table.
+## Even number of tables
+If the number of tables is even (4, 6, 8, 10, etc.), pairs see the same board after a few rounds.  We solved this problem by placing a relay table at the middle and an extra set of boards.  For example, 6-table Mitchell has a relay table between table 3 and 4.  While players move the same way, a set of boards will rest on the relay table and not played.  The consequence of this movement is players do not play the same boards and the comparison is less fair.
+## 4-table Square Mitchell
+For 4-table, there's a "Square" movement that does not require the relay table, or an extra set of boards.  The trade-off is a slightly complicated movement for both players and boards.
+We recommend simply do Howell movement for 4-table (8 pairs).  The movements are not that much more complex and all pairs play with all other pairs.
 
 # Howell Movement 
 Unlike Mitchell, Howell movements have all pairs play against all other pairs and generating
