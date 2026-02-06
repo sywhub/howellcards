@@ -205,9 +205,9 @@ class PairGames(DupBridge):
     # "boardData" and "roundData". After that, this sheet is generic.
     def roundTab(self):
         self.log.debug('Saving by Round')
-        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', ['Scores', 2]]
+        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
         sh = self.wb.create_sheet('By Round', 2)
-        row = self.headerRow(sh, headers, 1)
+        row = self.headerRow(sh, headers, 2)
         startRow = row
         for r in sorted(self.roundData.keys()): # round
             sh.cell(row, 1).value = r+1
