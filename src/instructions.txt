@@ -2,15 +2,20 @@ For Tournament Director: Howell Movement
 #There is a matching spreadsheet for this PDF.
 #There is no need to print all pages.
 #Bring writable masking tapes and pens to the  event.
-#Arrange to shuffle and deal all boards.
 #Tape the "movement sheets" on the table facing the same direction.
-#Cut from the print-out those travelers, ID tags, and pickup slips along the dotted line.
-#Note we do not expect players to compute scores, only to recored the results.
-#Assign pair number to each pair.  Hand them the ID tag.  Encourage them to write their own names on the ID tag. Note the ID tag tell them where to sit.
-#Fold and tuck the traveler for each board before the tournament begins.  Match board number with the traveler slip.
-#We provide 3 ways to keep scores: pickup slips, travelers, and the journal for each pair.  We recommend using two of them, up to the director.
-#Announce the direction of north to all participants.
-#Instruct all pairs to keep journals, North to keep score, South to caddy the boards.  #If using pickup slips, collect them at the end of each
-round.
-#if using travelers, collect when the tournment ends.
-#Use the spreadsheet to record results.  It computes results automatically.
+#ID tags, travelers, pickup slips, and play journals may need to be cut along the dotted line.
+#Assign pair number to each pair.  Hand them the ID tag.
+Encourage them to write their own names on the ID tag. Note
+the ID tag tell them where to sit.
+#Fold and tuck the traveler for each board before the
+tournament begins.  Make sure to match board number with the traveler
+slip.
+#We provide 3 ways to keep scores: pickup slips, travelers,
+and the journal for each pair.  Directors usually choose one of the traveler or pickup slips.
+Journals are intended to corroborate the primary score keeping.  Its use is optional.
+#Conventionally, North keeps score. South caddies the boards.
+#If using pickup slips, collect them at the end of each round.
+#If using travelers, collect when the tournment ends.
+#If using the journals, collect at the end as well.
+#Use either "By Board" (when use travelers) or "By Round" (with pickup slips) to enter scores.  Results show up
+at "Roster" automatically.

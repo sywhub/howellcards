@@ -117,16 +117,21 @@ class PDF(FPDF):
         self.set_font(size=PDF.linePt)
         h = self.lineHeight(self.font_size_pt)
         y = self.get_y()+2*h
-        nLine = 1
+        nLine = -1
+        mLines = []
         for t in txt[1:]:
-            lineNo = 0
-            self.set_xy(1, y)
             if t[0] == '#':
-                self.cell(h, h, f'{nLine}.', align='R')
-                lineNo = 1
+                mLines.append(t[1:])
                 nLine += 1
+            else:
+                mLines[nLine] += ' ' + t
+        lineNo = 1
+        for t in mLines:
+            self.set_xy(1, y)
+            self.cell(h, h=h, text=f"{lineNo}.", align='R')
             self.set_xy(1+h, y)
-            self.multi_cell(self.epw-2, h=h, text=t[lineNo:].strip())
+            self.multi_cell(self.epw-2, h=h, text=t.strip())
+            lineNo += 1
             y = self.get_y()
 
     def compass(self):
