@@ -30,6 +30,9 @@ class Mitchell(PairGames):
 
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
             f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.decks} Boards per round')
+        # initData must be the first one
+        self.initData()
+        self.meta()
 
     # identify whether the pair is NS or EW
     def pairSide(self, n):
@@ -64,8 +67,6 @@ class Mitchell(PairGames):
 
     def main(self):
         self.log.debug('Main goes')
-        # initData must be the first one
-        self.initData()
         self.pdf.instructions(self.log, 'mitchellInstructions.txt')
         self.roster()
         self.results()
@@ -111,10 +112,7 @@ class Mitchell(PairGames):
         ws = self.wb.active # the first tab
         ws.title = 'Roster'
 
-        tourney = {'Title':"Mitchell Tournament Scoring",
-            'Info': [['Pairs', self.pairs], ['Tables', self.tables], ['Boards per Round', self.decks]]}
-
-        row = self.sheetMeta(ws, tourney) + 2
+        row = self.sheetMeta(ws, self.metaData) + 2
         toN = self.pairs + (1 if self.oddPairs else 0)
         for s in range(2):
             ws.cell(row, 1).value =  f'{['NS', 'EW'][s]} Pairs'
@@ -158,12 +156,14 @@ class Mitchell(PairGames):
         ws.column_dimensions['C'].width = 30
         
     def rosterPDF(self):
-        y = self.meta()
+        self.pdf.add_page()
+        self.pdf.headerFooter()
+        self.pdf.meta(self.metaData)
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         title = 'Player Pairs'
         x = self.pdf.setHCenter(self.pdf.get_string_width(title))
-        y += 2 * h
+        y = self.pdf.get_y() + 2 * h
         self.pdf.set_xy(x, y)
         self.pdf.cell(text=title)
         widths = [1, 2, 2]
@@ -192,16 +192,13 @@ class Mitchell(PairGames):
     # Not doing meta sheet
     def meta(self):
         self.log.debug('Meta')
-        meta = {'Title': 'Mitchell Tournament', 'Info': []}
-        meta['Info'].append(('Pairs', self.pairs))
-        meta['Info'].append(('Tables', self.tables))
+        self.metaData = {'Title': 'Mitchell Tournament', 'Info': []}
+        self.metaData['Info'].append(('Pairs', self.pairs))
+        self.metaData['Info'].append(('Tables', self.tables))
         if self.tables % 2 == 0:
-            meta['Info'].append(('Relay between ', f"{self.tables // 2} and {self.tables // 2 + 1}"))
-        meta['Info'].append(('Rounds', self.pairs // 2 - 1))
-        meta['Info'].append(('Boards per round', self.decks))
-        self.pdf.add_page()
-        self.pdf.headerFooter()
-        return self.pdf.meta(meta)
+            self.metaData['Info'].append(('Relay between ', f"{self.tables // 2} and {self.tables // 2 + 1}"))
+        self.metaData['Info'].append(('Rounds', self.pairs // 2 - 1))
+        self.metaData['Info'].append(('Boards per round', self.decks))
 
     def setTableTexts(self):
         self.log.debug('Setting Table borders')

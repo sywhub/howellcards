@@ -33,13 +33,6 @@ class Howell(PairGames):
         return
 
     def save(self):
-        self.idTags()
-        self.movementTables()
-        self.Travelers()
-        self.Pickups()
-        self.Journal()
-        self.IMPTable()
-        self.ScoreTable()
         here = os.path.dirname(os.path.abspath(__file__))
         fn = f'{here}/../howell{self.pairs}{"xF" if self.fake else ""}'
         self.wb.save(f'{fn}.xlsx')
@@ -86,18 +79,12 @@ class Howell(PairGames):
         nRound = self.tourneyData['Rounds']
 
         # meta data
-        metaData = {'Title': 'Howell Tournament',
+        self.metaData = {'Title': 'Howell Tournament',
             'Info': [['Pairs', self.pairs], ['Tables',int((self.pairs + (self.pairs % 2))/ 2)],
             ['Rounds',nRound], ['Boards per round',self.decks], ['Total Boards to play', self.decks*nRound]]}
 
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
            f'Howell Movement for {self.pairs} Pairs')
-
-        self.pdf.instructions(self.log, "instructions.txt")
-        self.pdf.add_page()
-        self.pdf.headerFooter()
-        self.pdf.meta(metaData)
-        self.rosterSheet(metaData)
 
     # Present the same data table-oriented
     def movementTables(self):
@@ -132,14 +119,12 @@ class Howell(PairGames):
 
     # Roster sheet
     # Also the final result
-    def rosterSheet(self, meta):
+    def rosterSheet(self):
         self.log.debug('Creating Roster Sheet')
-        headers = ['Pair #', 'Player 1', 'Player 2', 'IMP', 'MP']
-        self.rosterPDF(headers[:-2])
 
         sh = self.wb.active
         sh.title = 'Roster'
-        row = self.sheetMeta(sh, meta) + 2
+        row = self.sheetMeta(sh, self.metaData) + 2
         sh.cell(row, 1).value =  'Pairs'
         sh.cell(row, 1).font = self.HeaderFont
         sh.cell(row, 1).alignment = self.centerAlign
@@ -210,41 +195,44 @@ class Howell(PairGames):
         sh.cell(self.pairs+row, 5).border = topBorder
 
     # Sign-up sheet
-    def rosterPDF(self, headers):
-        rows = self.pairs
+    def rosterPDF(self):
+        self.pdf.add_page()
+        self.pdf.headerFooter()
+        self.pdf.meta(self.metaData)
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        title = 'Players'
+        title = 'Player Pairs'
         x = self.pdf.setHCenter(self.pdf.get_string_width(title))
-        self.pdf.set_xy(x, self.pdf.get_y()+2*h)
-        self.pdf.cell(text=title)
-        nCol = len(headers)
-        # paper width minus margins from both side, minus the 1st column width
-        # divide the rest evenly.
-        xstart = 1  # left edge
-        colWidth = (self.pdf.epw - xstart * 3 ) / (nCol - 1)
-        tblCols = [colWidth]*(nCol - 1)
-        tblCols.insert(0, xstart)
-        self.pdf.set_font(style='B', size=self.pdf.rosterPt) 
-        y = self.pdf.get_y() + h * 3   # go down 3 lines
-        x = xstart
+        y = self.pdf.get_y() + 2 * h
         self.pdf.set_xy(x, y)
-        for i in range(nCol):
-            self.pdf.cell(tblCols[i], h, headers[i], align='C', border=1)
-        y += h
-        self.pdf.set_xy(xstart, y)
-        self.pdf.set_font(self.pdf.sansSerifFont, style='', size=self.pdf.headerPt)
+        self.pdf.cell(text=title)
+        widths = [1, 2, 2]
+        y +=  h
+        leftM = (self.pdf.w - sum(widths)) / 2
+        self.pdf.set_xy(leftM, y)
+        self.pdf.set_font(self.pdf.sansSerifFont, size=(self.pdf.bigPt if self.pairs < 19 else self.pdf.linePt)) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        for i in range(rows):
-            self.pdf.cell(tblCols[0], h, f'{i+1}', align='C', border=1)
-            for j in range(1, nCol):
-                self.pdf.cell(tblCols[j], h, '', align='C', border=1)
+        for i in range(self.pairs):
+            self.pdf.set_xy(leftM, y)
+            self.pdf.cell(widths[0], h, text=f'{self.pairN(i+1)}', align='C', border=1)
+            self.pdf.cell(widths[1], h, text='', align='C', border=1)
+            self.pdf.cell(widths[2], h, text='', align='C', border=1)
             y += h
-            self.pdf.set_xy(xstart, y)
 
     def go(self):
+        self.rosterSheet()
         self.boardTab()
         self.roundTab()
+        self.IMPTable()
+        self.ScoreTable()
+
+        self.pdf.instructions(self.log, "instructions.txt")
+        self.rosterPDF()
+        self.idTags()
+        self.movementTables()
+        self.Travelers()
+        self.Pickups()
+        self.Journal()
         self.save()
 
 def howellFromJson(log, pairs, fake, jsonfile):

@@ -90,14 +90,13 @@ class PDF(FPDF):
         y = self.margin + h
         self.set_xy(x, y)
         self.cell(text=meta['Title'])
-        self.set_font(self.sansSerifFont, size=self.bigPt) 
+        self.set_font(self.sansSerifFont, style='I', size=self.bigPt) 
         h = self.lineHeight(self.font_size_pt)
-        x += h
         self.set_xy(x, y)
         for t in meta['Info']:
             y += h
             self.set_xy(x, y)
-            self.cell(text=f"{t[0]} {t[1]}")
+            self.cell(text=f"{t[0]}: {t[1]}")
         return self.get_y()
 
     # Board tab references its data from the Round tab, for consistency
