@@ -232,9 +232,6 @@ class PairGames(DupBridge):
                 for i in range(2,len(headers)+1):
                     sh.cell(row-1, i).border = self.bottomLine
             sh.cell(row-1,1).border = self.bottomLine
-        if self.fake:
-            for i in range(startRow, row):
-                self.fakeScore(sh, i, headers.index('Result')+2)
         return
 
     # Pickup Slip is PDF only

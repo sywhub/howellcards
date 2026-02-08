@@ -41,7 +41,7 @@ class Howell(PairGames):
         self.IMPTable()
         self.ScoreTable()
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../howell{self.pairs}'
+        fn = f'{here}/../howell{self.pairs}{"xF" if self.fake else ""}'
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
@@ -179,6 +179,8 @@ class Howell(PairGames):
                 self.computeNet(sh, row, cIdx-1, nIdx)
                 self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
                 self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
+                if self.fake:
+                    self.fake(sh, row, cIdx-1)
                 cursorRow += 1
                 row += 1
             for c in range(len(headers)+(nTbl-1)*4-4):

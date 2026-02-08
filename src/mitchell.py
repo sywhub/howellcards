@@ -233,6 +233,8 @@ class Mitchell(PairGames):
                 self.computeNet(sh, row, cIdx-1, nIdx)
                 self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
                 self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
+                if self.fake:
+                    self.fakeScore(sh, row, cIdx-1)
                 row += 1
                 cursorRow += 1
             for c in range(len(headers)+(self.tables-1)*4-4):
@@ -348,7 +350,7 @@ class Mitchell(PairGames):
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../mitchell{self.pairs}x{self.decks}'
+        fn = f'{here}/../mitchell{self.pairs}x{self.decks}{"xF" if self.fake else ""}'
         self.log.debug(f'Save files: {fn}')
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
