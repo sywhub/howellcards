@@ -203,46 +203,6 @@ class Mitchell(PairGames):
         self.pdf.headerFooter()
         return self.pdf.meta(meta)
 
-    # Board tab references its data from the Round tab, for consistency
-    # Then it compute the scores on the sheet
-    def boardTab(self):
-        self.log.debug('Saving by Board')
-        sh = self.wb.create_sheet('By Board', 1)
-        row, headers = self.boardSheetHeaders(sh, self.tables)
-        rGap = self.tables * self.decks    # Number of rows between each round
-        for b in sorted(self.boardData.keys()):
-            sh.cell(row, 1).value = b+1     # board #
-            sh.cell(row, 1).alignment = self.centerAlign
-            nPlayed = len(self.boardData[b])    # # of times this board was played
-            cursorRow = 0
-            for r in self.boardData[b]: # (round, table, NS, EW)
-                sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(r[0] * rGap + 3, 1)}"
-                tBase = r[0] * rGap + r[1] * self.decks + 3
-                sh.cell(row, 3).value = f"='By Round'!{self.rc2a1(tBase, 2)}"
-                sh.cell(row, 4).value = f"='By Round'!{self.rc2a1(tBase, 3)}"
-                sh.cell(row, 5).value = f"='By Round'!{self.rc2a1(tBase, 4)}"
-                tBase += b % self.decks
-                for i in range(6, len(headers)+1):
-                    c = f"'By Round'!{self.rc2a1(tBase, i)}"
-                    sh.cell(row, i).value = f'=IF(ISBLANK({c}),"",{c})'
-                for i in range(2,7):
-                    sh.cell(row, i).alignment = self.centerAlign
-
-                cIdx = headers.index('Result')+3
-                nIdx = cIdx + 7
-                self.computeNet(sh, row, cIdx-1, nIdx)
-                self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
-                self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
-                if self.fake:
-                    self.fakeScore(sh, row, cIdx-1)
-                row += 1
-                cursorRow += 1
-            for c in range(len(headers)+(self.tables-1)*4-4):
-                sh.cell(row-1, c+1).border = self.bottomLine
-        self.boardVerticals(sh, headers, self.tables)
-
-        return
-
     def setTableTexts(self):
         self.log.debug('Setting Table borders')
         if self.pairs == 8:

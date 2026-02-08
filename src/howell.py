@@ -82,6 +82,7 @@ class Howell(PairGames):
                         self.boardData[b] = []
                     self.boardData[b].append([r, t, tbl['NS'], tbl['EW']])
         self.initRounds()
+        self.tables = len(self.roundData[0])
         nRound = self.tourneyData['Rounds']
 
         # meta data
@@ -128,64 +129,6 @@ class Howell(PairGames):
                 nsText.append(f'Move To Table {moveData[t]['nsNext'][0]+1} {moveData[t]['nsNext'][1]}')
             ewText.append(f'Move To Table {moveData[t]['ewNext'][0]+1} {moveData[t]['ewNext'][1]}')
         self.Tables(nsText, ewText)
-
-    # Board-oriented view
-    # A "board" is really a set of decks in the code.  The number of decks is in
-    # "self.decks".  We make it 3 for 6-pair tournaments and 2 otherwise.
-    # In this "by board" sheet, we also do the scoring.
-    def saveByBoard(self):
-        rounds = self.tourneyData['Arrangement']
-        self.log.debug('Saving by Board')
-        sh = self.wb.create_sheet('By Board', 1)    # insert it as the 2nd sheet
-        nTbl = len(rounds[0])
-        row, headers = self.boardSheetHeaders(sh, nTbl)
-
-        # build a datastructure for ease of navigation
-        # just pivotig the source data
-        # board keyed by board set #, value = [(round, table, NS, EW), ...]
-        boards = {}
-        for r,t in enumerate(rounds):
-            for tbl, p in enumerate(t):
-                for b in [p['Board']*self.decks + x for x in range(self.decks)]:
-                    if b not in boards:
-                        boards[b] = []
-                    boards[b].append((r, tbl, p['NS'], p['EW']))
-
-
-        # each iteration advanceds by a set of boards, governed by self.decks
-        for b in sorted(boards.keys()): # b is a set of self.decks
-            sh.cell(row, 1).value = b + 1
-            cursorRow = 0
-            # loop through the "rounds" this board were played
-            for r in sorted(boards[b], key=lambda x: x[0]):
-                # always reference the "By Round" sheet for ease of editing by hand
-                roundRow = r[0]*nTbl*self.decks+3
-                sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(roundRow, 1)}"
-                for c in range(2, 11):
-                    boardRow = roundRow + r[1]*self.decks
-                    a1 = self.rc2a1(boardRow, c if c < 5 else c + 1)
-                    cVal = f"'By Round'!{a1}"
-                    if c >= 6:
-                        bcheck = f'=IF(ISBLANK({cVal}),"",{cVal})'
-                    else:
-                        bcheck= f'={cVal}'
-                    sh.cell(row, 1+c).value = bcheck 
-                sh.cell(row, 6).value = self.vulLookup(b)
-                sh.cell(row, 6).alignment = self.centerAlign
-
-                nPlayed = len(boards[b])    # # of times this board was played
-                cIdx = headers.index('Result')+3
-                nIdx = cIdx + 7
-                self.computeNet(sh, row, cIdx-1, nIdx)
-                self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
-                self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
-                if self.fake:
-                    self.fake(sh, row, cIdx-1)
-                cursorRow += 1
-                row += 1
-            for c in range(len(headers)+(nTbl-1)*4-4):
-                sh.cell(row-1, c+1).border = self.bottomLine
-        self.boardVerticals(sh, headers, nTbl)
 
     # Roster sheet
     # Also the final result
@@ -300,7 +243,7 @@ class Howell(PairGames):
             self.pdf.set_xy(xstart, y)
 
     def go(self):
-        self.saveByBoard()
+        self.boardTab()
         self.roundTab()
         self.save()
 
