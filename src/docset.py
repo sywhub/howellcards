@@ -3,6 +3,7 @@
 # These classes depend on the data set generated offline.
 #
 from openpyxl.styles import Font, Alignment, Border, Side
+from openpyxl.worksheet.errors import IgnoredError
 import random
 
 class DupBridge:
@@ -16,6 +17,7 @@ class DupBridge:
         self.thinTop = Border(top=self.thinLine)
         self.thinLeft = Border(left=self.thinLine)
         self.HeaderFont = Font(bold=True, size=14)
+        self.notice = 'For public domain. No rights reserved. Generated on'
         self.fake = False
 
     # IMP conversion table
@@ -172,6 +174,9 @@ class PairGames(DupBridge):
 
     # Placeholder functions, expect to be over-written by child classes
     # Turn internal pair number to human readable value
+    def ifSitout(self, t, ns, ew):
+        return False
+
     def pairN(self, n):
         return n + 1
 
@@ -179,9 +184,11 @@ class PairGames(DupBridge):
     def pairID(self, n):
         return f"{self.pairN(n)}"
     
+    def boardList(self, bIdx):
+        return [self.decks*bIdx+x for x in range(self.decks)]
 
-    def fakeScore(self, sh, row, col):
-        if random.random() < 0.90:
+    def fakeScore(self, sh, row, col, avgProb=0.9):
+        if random.random() < avgProb:
             pickSide = col if random.random() >= 0.5 else col+1
             score = random.randint(2,80)*10
             sh.cell(row, pickSide).value = score
@@ -554,6 +561,7 @@ class PairGames(DupBridge):
                 cmpF += f'*SIGN({self.rc2a1(row, netIdx+i)}-{self.rc2a1(row+opponents[rCmp], netIdx+i)}),0)'
                 targetC = cIdx+calcStart+rCmp+i*n
                 sh.cell(row, targetC).value = cmpF
+                #sh.ignore_errors.append(IgnoredError(sqref=f"{self.rc2a1(row, targetC)}", inconsistentFormula=True))
         return
 
     def boardSheetHeaders(self, sh, nTbl):
@@ -599,7 +607,6 @@ class PairGames(DupBridge):
             sh.cell(row, 3).value = info[1]
             sh.cell(row, 3).font = self.HeaderFont
         return row
-
 
 if __name__ == '__main__':
     pgame = PairGames(None)

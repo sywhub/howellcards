@@ -28,10 +28,8 @@ class Mitchell(PairGames):
         self.pdf = pdf.PDF()
         self.wb = Workbook()
 
-        notice = f'For public domain. No rights reserved. {datetime.date.today().strftime("%Y")}.'
-        footer = f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.decks} Boards per round'
-        self.pdf.HeaderFooterText(notice, footer)
-
+        self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
+            f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.decks} Boards per round')
 
     # identify whether the pair is NS or EW
     def pairSide(self, n):

@@ -24,7 +24,6 @@ from docset import PairGames
 class Howell(PairGames):
     def __init__(self, log, toFake, pairs, tourney):
         super().__init__(log)
-        self.notice = 'For public domain. No rights reserved. Generated on'
         self.fake = toFake
         self.pdf = pdf.PDF()
         self.wb = Workbook()
@@ -53,9 +52,6 @@ class Howell(PairGames):
     def pairID(self, n):
         return f"{n if n != 0 else self.SITOUT}"
 	
-    def boardList(self, bIdx):
-        return [self.decks*bIdx+x for x in range(self.decks)]
-    
     def ifSitout(self, t, ns, ew):
         return ns == 0
 

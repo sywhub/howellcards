@@ -1,7 +1,8 @@
+Team Matches
 #There is a matching spreadsheet for this PDF.
-#Each pair has their seating card and a journal sheet.
-#At the end of the round, the table may exchange boards.
-#At the end of every 2 rounds, players may change seats.
-#Each pair must record the results of each board played.
+#For 4 pairs, we form 2 teams in 3 different compositions.
+#For each composition, play 2 rounds.  Each with different table seatings.
+#For each round, each table play n boards then exchange the boards.
+#Technically, we call it 12 rounds.  It's really 3 matches.
 #Instruct the players not to reveal their journal to the opponents.
-#At the end of the tournament, collect all journal sheets and enter them into the spreadsheet.
+#At the end of the tournament, collect all travelers and journals.
