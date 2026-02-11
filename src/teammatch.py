@@ -39,6 +39,8 @@ class TeamMatch(PairGames):
         self.decks = boards
         self.fake = fake
         self.initData()
+        if not self.checkBoardData() or not self.checkRoundData():
+            raise Exception("Invalid Tournament Data")
 
     def pairN(self, n):
         return n
@@ -208,7 +210,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
     parser.add_argument('-b', '--boards', type=int, choices=range(1,5), default=2, help='Number of boards per round')
-    parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
+    parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
         if args.debug.upper() == l[0]:
