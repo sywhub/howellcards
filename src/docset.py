@@ -6,6 +6,7 @@ from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.worksheet.errors import IgnoredError
 import random
 
+# Duplicate Bridge
 class DupBridge:
     def __init__(self, log):
         self.log = log
@@ -14,6 +15,7 @@ class DupBridge:
         self.trumps = ('D/C', 'H/S', 'NT')  
         self.thinLine = Side(style='thin', color="000000")
         self.mediumLine = Side(style='medium',color="000000")
+        self.bottomLine = Border(bottom=self.thinLine)
         self.thinTop = Border(top=self.thinLine)
         self.thinLeft = Border(left=self.thinLine)
         self.HeaderFont = Font(bold=True, size=14)
@@ -150,6 +152,8 @@ class DupBridge:
     def placeHolderName(self):
         return f'Name {random.randint(11,90)}'
 
+    # Row/Colomn to "A1" style
+    # If "sheet" is avaiable, could have use the "cooridate" method.
     def rc2a1(self, r, c):
         col = ''
         c -= 1
@@ -158,16 +162,23 @@ class DupBridge:
         col += chr(c%26+ord('A'))
         return f"{col}{r}"
 
+    # Vulnerability of a board (zero-based)
+    # Vulnerability is a rotation of 16 boards.  First 4 is the default.
+    # Then each subsequent 4 is a left-shift rotation of the values.
+    # After 16 boards, it's back to the original.
     def vulLookup(self, bidx):
         vulShift = bidx // 4
         return ['None', 'NS', 'EW', 'Both'][(bidx + vulShift) % 4]
 
 # Howell and Mitchell tournaments
+# We really arrange all tournaments to be "pair" oriented.
+# The tournament is arranged by two data structures "boardData" and "roundData"
+# Then they have different scoring/ranking methodologies.
 class PairGames(DupBridge):
     def __init__(self, log):
+        # We expect "self.tables" and "self.decks" to be done by the child class
         super().__init__(log)
         self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
-        self.bottomLine = Border(bottom=self.thinLine)
         self.SITOUT = "Sit-Out"
         self.roundData = {} # meant to be write-once
         self.boardData = {} # meant to be write-once
@@ -184,9 +195,12 @@ class PairGames(DupBridge):
     def pairID(self, n):
         return f"{self.pairN(n)}"
     
+    # Return a list of actual board numbers (zero-based) from "board set" (zero-based)
     def boardList(self, bIdx):
         return [self.decks*bIdx+x for x in range(self.decks)]
 
+    # Insert a score to check calculations
+    # Probably could have been more sophisticated
     def fakeScore(self, sh, row, col, avgProb=0.9):
         if random.random() < avgProb:
             pickSide = col if random.random() >= 0.5 else col+1
@@ -196,7 +210,7 @@ class PairGames(DupBridge):
             sh.cell(row, col).value = 'Avg'
             sh.cell(row, col+1).value = 'Avg'
 
-    # Construct "roundData" from "boardData"
+    # Construct "roundData" from "boardData".
     def initRounds(self):
         # A convenient restructure
         for b,bset in self.boardData.items():
@@ -208,8 +222,6 @@ class PairGames(DupBridge):
                 self.roundData[s[0]][s[1]]['Board'].append(b)
 
     # Generate spreadsheet tab of "By Round" based on "roundData"
-    # Both Howell and Mitchell classes will first generate their own
-    # "boardData" and "roundData". After that, this sheet is generic.
     def roundTab(self):
         self.log.debug('Saving by Round')
         headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
@@ -273,7 +285,9 @@ class PairGames(DupBridge):
                 bIdx += 1
                 y = self.pdf.sectionDivider(4, bIdx, xMargin)
 
-        nExtra = 4 - len(tables) % 4
+        # People tend to lose pickup Slips.  They are given in the beginning for all rounds.
+        # Print extra to fill a page or just 4 extras
+        nExtra = 4 - bIdx % 4
         for _ in range(nExtra):
             if bIdx % 4 == 0:
                 self.pdf.add_page()
@@ -303,6 +317,8 @@ class PairGames(DupBridge):
             y += h
             self.pdf.set_xy(xMargin, y)
 
+    # Journal is for each pair to keep their own records
+    # TD may collect them at the end to corroborate traveler or pickup slips
     def Journal(self):
         pairData = {}
         pairIdx = [2, 3]
@@ -346,6 +362,7 @@ class PairGames(DupBridge):
             y = self.pdf.sectionDivider(nPerPage, pIdx, self.pdf.margin)
         return
 
+    # Traveler goes with each board and "travel" among tables
     # Data {pair #: [(round, table, NS, EW), ...], ...}
     def Travelers(self):
         tblCols = []
@@ -360,17 +377,15 @@ class PairGames(DupBridge):
             if bIdx % nPerPage == 0:
                 self.pdf.add_page()
                 y = 0.5
-            y = self.BoardTraveler(xMargin, tblCols, hdrs, b, r, y)
+            y = self.printTraveler(xMargin, tblCols, hdrs, b, r, y)
             bIdx += 1
             if nPerPage > 1:
                 y = self.pdf.sectionDivider(nPerPage, bIdx, xMargin)
-        # print several spare ones
-        while bIdx % nPerPage != 0:
-            # y = self.BoardTraveler(xMargin, tblCols, hdrs, b, r, y, True)
-            bIdx += 1
         return
 
-    def BoardTraveler(self, leftSide, tblCols, hdrs, bdNum, round, y):
+    # We may use this to print extra blank travelers.
+    # Similar to Pickup slips
+    def printTraveler(self, leftSide, tblCols, hdrs, bdNum, round, y):
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Board {bdNum+1} Traveler')
         y += self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -389,6 +404,8 @@ class PairGames(DupBridge):
             y += h
         return y
 
+    # Print out the instructions for each table's movement card
+    # (The table in the middle of the page)
     def Tables(self, nsTexts, ewTexts):
         tables = {}
         for b,r in self.boardData.items():
@@ -439,6 +456,9 @@ class PairGames(DupBridge):
                 y += h
                 self.pdf.set_xy(xMargin, y + h)
 
+    # ID tag is for each person (not pair) to hold on to.
+    # It gives extra information on next table and opponents.
+    # It is in small font as the person can read it up-close.
     def idTags(self):
         idData = {}
         for rd, tbl in self.roundData.items(): # (round, table, NS, EW)
@@ -536,6 +556,7 @@ class PairGames(DupBridge):
                 targetC = cIdx+calcStart+rCmp+i*n
                 sh.cell(row, targetC).value = cmpF
 
+    # Net columns a convenient for MP/IMP computation.
     def computeNet(self, sh, row, raw, target):
         rawNS = self.rc2a1(row, raw)
         rawEW = self.rc2a1(row, raw+1)
@@ -558,9 +579,9 @@ class PairGames(DupBridge):
                 cmpF += f'*SIGN({self.rc2a1(row, netIdx+i)}-{self.rc2a1(row+opponents[rCmp], netIdx+i)}),0)'
                 targetC = cIdx+calcStart+rCmp+i*n
                 sh.cell(row, targetC).value = cmpF
-                #sh.ignore_errors.append(IgnoredError(sqref=f"{self.rc2a1(row, targetC)}", inconsistentFormula=True))
         return
 
+    # Common function to print a row of "headers" stylistically
     def boardSheetHeaders(self, sh, nTbl):
         # first row setup some spanning column headers
         mergeHdrs = [['Score', 2], ['IMP', 2], ['MP %', 2], ['MP Pts', 2], ['Net', 2],
@@ -578,6 +599,7 @@ class PairGames(DupBridge):
         row = self.headerRow(sh, headers, 2)
         return (row, headers)
         
+    # Draw vertical lines at certain columns
     def boardVerticals(self, sh, headers, ntbl):
         vertical = [headers.index('Result')+4]
         vertical.append(vertical[-1] + 6)
@@ -588,7 +610,9 @@ class PairGames(DupBridge):
                 bd = sh.cell(r, c).border
                 sh.cell(r, c).border = Border(left=self.thinLine, bottom=bd.bottom)
 
+    # Print tournament's meta information on a sheet
     def sheetMeta(self, sh, metaData):
+        # Standard copyright notice
         sh.cell(1, 1).value = self.pdf.headerText
         sh.cell(1, 1).font = Font(size=10, italic=True, color="5DADE2")
 
@@ -643,9 +667,38 @@ class PairGames(DupBridge):
                 sh.cell(row-1, c+1).border = self.bottomLine
         self.boardVerticals(sh, headers, self.tables)
         return
+    
+    # Some simple validity checks
+    # boardData and roundData are generated from one, or the other.
+    # Not checking if they are consistent to each other.
+    def checkBoardData(self):
+        if not hasattr(self, 'boardData') or len(self.boardData) <= 0:
+            return False
+        pData = {}
+        # No one can play the same board more than once
+        for b,t in self.boardData.items():
+            for tbl in t:
+                # (round table ns ew)
+                for s in [2, 3]:
+                    if tbl[s] not in pData:
+                        pData[tbl[s]] = {'Boards': [], 'Against': []}
+                    if b not in pData[tbl[s]]['Boards']:
+                        pData[tbl[s]]['Boards'].append(b)
+                    else:
+                        raise Exception(f"Pair {tbl[s]} played board #{b+1} already")
 
+        # No pair can meet anothe pair more than once
+        sides = ['NS', 'EW']
+        for t in self.roundData.values():
+            for tbl in t.values():
+                for s in [0,1]:
+                    if tbl[sides[s]] not in pData[tbl[sides[1-s]]]['Against']:
+                        pData[tbl[sides[1-s]]]['Against'].append(tbl[sides[s]])
+                    else:
+                        raise Exception(f"Pair {pData[sides[1-s]]} played againt {tbl[sides[s]]} already")
 
-if __name__ == '__main__':
-    pgame = PairGames(None)
-    for c in range(25,100):
-        print(f"{c}: {pgame.rc2a1(1,c)}")
+        # There are some "soft" rules
+        # Players should play the same boards, at least the same number of boards
+        # Boards should not appear on different tables for the same round
+        # These checks must allow exceptions.  Harder to code.  Not sure worth the efforts.
+        return True

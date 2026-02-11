@@ -75,6 +75,7 @@ class Howell(PairGames):
                         self.boardData[b] = []
                     self.boardData[b].append([r, t, tbl['NS'], tbl['EW']])
         self.initRounds()
+        self.checkBoardData()
         self.tables = len(self.roundData[0])
         nRound = self.tourneyData['Rounds']
 
@@ -246,7 +247,7 @@ if __name__ == '__main__':
     log = setlog('howell', None)
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--pair', type=int, choices=range(5,15), help='# of pairs in the tournament')
-    parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
+    parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
     parser.add_argument('-d', '--debug', type=str, default='INFO')
     parser.add_argument('-j', '--jsonfile', type=str)
     args = parser.parse_args()

@@ -99,6 +99,7 @@ class Mitchell(PairGames):
                             self.boardData[b+bset] = []
                         self.boardData[b+bset].append([r, t, self.NSPair(r, t), self.EWPair(r, t)])
         self.initRounds()
+        self.checkBoardData()
 
     def roster(self):
         self.log.debug('Roster sheet and PDF')
@@ -326,7 +327,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
     parser.add_argument('-b', '--boards', type=int, choices=range(1,7), default=4, help='Boards per round')
     parser.add_argument('-p', '--pair', type=int, choices=range(8,25), default=8, help='Number of pairs')
-    parser.add_argument('-f', '--fake', type=bool, default=False, help='Fake scores to test the spreadsheet')
+    parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
         if args.debug.upper() == l[0]:
