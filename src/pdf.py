@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from fpdf import FPDF
-# Generate PDF for Howell tournament based on the data produced elsewhere
-# Driven from "docset" which was made for Excel to start
+# Generate PDF for a matching spreadsheet
+# PDFs are for machines, its generation is tedious...
 
 class PDF(FPDF):
     margin = 0.25
@@ -173,31 +173,34 @@ class PDF(FPDF):
         self.set_font(saveFont)
 
     def tableAnchors(self, t):
+        saveMargin = self.margin
+        self.set_margin(0)
         self.set_font_size(self.anchorFontSize)
-        xOffset = self.get_string_width(t)
-        yOffset = self.pt2in(self.anchorFontSize) / 2
+        tWidth = self.get_string_width(t)
+        tHeight = self.pt2in(self.anchorFontSize)
         for corner in range(4):
             match corner:
                 case 0:
-                    x = xOffset + self.margin
-                    y = self.margin
-                    rot = 0
+                    x = tWidth
+                    y = tHeight
+                    rot = 180
                 case 1:
-                    x = self.w - xOffset - self.margin
-                    y = self.margin
-                    rot = 0
+                    x = self.w - tWidth
+                    y = tHeight
+                    rot = 180
                 case 2:
-                    x = xOffset + self.margin + xOffset
-                    y = self.h - yOffset * 2 - self.margin
-                    rot = 180
+                    x = 0
+                    y = self.eph - tHeight
+                    rot = 0
                 case 3:
-                    x = self.w - xOffset - self.margin
-                    y = self.h - yOffset * 2 - self.margin
-                    rot = 180
+                    x = self.w - tWidth
+                    y = self.eph - tHeight
+                    rot = 0
             # self.circle(x, y, radius, 'D')
             self.set_xy(x, y)
             with self.rotation(angle=rot):
                 self.cell(text=t)
+            self.set_margin(saveMargin)
 
     def angleText(self, txt, facing, edgeMargin):
         strW = self.get_string_width(txt)
@@ -255,6 +258,7 @@ class PDF(FPDF):
         return y + h
 
 def experimentPDF(pdf):
+    pdf.set_margin(0)
     pdf.line(0, pdf.h / 2, pdf.w, pdf.h / 2)
     pdf.line(0, pdf.h / 2, pdf.w, pdf.h / 2)
     pdf.line(pdf.w / 2, 0, pdf.w / 2, pdf.h)
@@ -270,6 +274,20 @@ def experimentPDF(pdf):
         pdf.set_xy(pdf.w / 2, pdf.h / 2)
         with pdf.rotation(angle=a):
             pdf.cell(w=None, h=pdf.font_size, text=f'{t} @ {a}')
+    anchor = '8'
+    aW = pdf.get_string_width(anchor) * 1.5
+    aH = pdf.pt2in(pdf.font_size_pt)
+    pdf.set_xy(aW, aH)
+    with pdf.rotation(angle=180):
+        pdf.cell(text='6')
+    pdf.set_xy(pdf.w-aW, aH)
+    with pdf.rotation(angle=180):
+        pdf.cell(text='7')
+    pdf.set_xy(0, pdf.h-aH)
+    pdf.cell(text='8')
+    pdf.set_xy(pdf.w-aW, pdf.h-aH)
+    pdf.cell(text='9')
+
 
 
 if __name__ == '__main__':
