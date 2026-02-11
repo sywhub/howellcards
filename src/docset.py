@@ -685,7 +685,7 @@ class PairGames(DupBridge):
                     if b not in pData[tbl[s]]['Boards']:
                         pData[tbl[s]]['Boards'].append(b)
                     else:
-                        raise Exception(f"Pair {tbl[s]} played board #{b+1} already")
+                        raise ValueError('Same Baord', tbl[s], b+1)
 
         # No pair can meet anothe pair more than once
         sides = ['NS', 'EW']
@@ -695,7 +695,7 @@ class PairGames(DupBridge):
                     if tbl[sides[s]] not in pData[tbl[sides[1-s]]]['Against']:
                         pData[tbl[sides[1-s]]]['Against'].append(tbl[sides[s]])
                     else:
-                        raise Exception(f"Pair {pData[sides[1-s]]} played againt {tbl[sides[s]]} already")
+                        raise ValueError('Same Pair', tbl[sides[1-s]], tbl[sides[s]])
 
         # There are some "soft" rules
         # Players should play the same boards, at least the same number of boards

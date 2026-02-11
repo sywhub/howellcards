@@ -39,8 +39,11 @@ class TeamMatch(PairGames):
         self.decks = boards
         self.fake = fake
         self.initData()
-        if not self.checkBoardData() or not self.checkRoundData():
-            raise Exception("Invalid Tournament Data")
+        try:
+            self.checkBoardData()
+        except ValueError as ex:
+            if ex.args[0] != 'Same Pair':
+                raise ex
 
     def pairN(self, n):
         return n
@@ -75,7 +78,6 @@ class TeamMatch(PairGames):
                     if b not in self.boardData:
                         self.boardData[b] = []
                     self.boardData[b].append([r, tbl, p['NS'], p['EW']])
-        
 
     # Roster sheet
     # The roster tab also shows the tournament results
