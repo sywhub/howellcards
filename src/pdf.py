@@ -232,16 +232,21 @@ class PDF(FPDF):
         if 'Contract' in hdrs:
             cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
-    def headerRow(self, leftMargin, y, cols, hdrs, title, doubleHeight=False):
+    def headerRow(self, leftMargin, y, cols, hdrs, title):
         self.set_xy(leftMargin, y)
         h = self.lineHeight(self.font_size_pt)
         self.cell(text=title)
         y += h
         self.set_xy(leftMargin, y)
         self.set_font(self.sansSerifFont, style='B')
-        h = self.lineHeight(self.font_size_pt) * (2 if doubleHeight else 1)
+        h = self.lineHeight(self.font_size_pt)
         for i in range(len(hdrs)):
+            if hdrs[i] == 'Made':
+                self.set_font(size=self.font_size_pt / 2)
+                self.cell(cols[i]+cols[i]+1, h/2, text='Result', align='C', border=1)
             self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
+            if hdrs[i] == 'Down':
+                self.set_font(size=self.font_size_pt)
         return y
 
     def sectionDivider(self, nSection, bIdx, leftMargin):
