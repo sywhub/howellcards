@@ -261,13 +261,9 @@ class PairGames(DupBridge):
                 tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
         tblCols = []
         xMargin = self.pdf.margin
-        hdrs = ['NS Score', 'Result', 'NS Contract', 'By', 'Board', 'EW Contract', 'By', 'Result', 'EW Socre']
-        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
+        hdrs = ['NS Score', 'Made', 'Down', 'NS Contract', 'By', 'Board', 'EW Contract', 'By', 'Made', 'Down', 'EW Socre']
+        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.notePt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        allW = sum(tblCols)
-        extraW = (self.pdf.epw - allW) / 2
-        tblCols[2] += extraW
-        tblCols[5] += extraW
         bIdx = 0
         for t in sorted(tables.keys()):
             # the sit-out table
@@ -300,9 +296,9 @@ class PairGames(DupBridge):
 
     def printPickup(self, title, boards, tblCols, hdrs, xMargin, y):
         y += self.pdf.lineHeight(self.pdf.font_size_pt)
-        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt)
+        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.notePt)
         y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, title)
-        self.pdf.set_font(size=self.pdf.linePt)
+        self.pdf.set_font(size=self.pdf.notePt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         y += h
         self.pdf.set_xy(xMargin, y)
@@ -311,7 +307,7 @@ class PairGames(DupBridge):
             for i in range(boardCol):
                 self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
             bText = f'{b["Board"]+1}' if type(b) != str else b
-            self.pdf.cell(tblCols[4], h, text=bText, align='C', border=1)
+            self.pdf.cell(tblCols[5], h, text=bText, align='C', border=1)
             for i in range(boardCol+1,len(hdrs)):
                 self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
             y += h
@@ -332,12 +328,12 @@ class PairGames(DupBridge):
         nPerPage = 2 if len(pairData[1]) < 18 else 1
         pIdx = 0
         xMargin = self.pdf.margin * 2
-        hdrs = ['Board', 'Round', 'Sit-Out', 'EW', 'Contract', 'By', 'Result', '8'*4, '8'*4]
+        hdrs = ['Board', 'Round', 'Sit-Out', 'EW', 'Contract', 'By', 'Made', 'Down', '8'*4, '8'*4]
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
         hdrs[2] = 'NS'  # used "sit-out" to make sure sufficient width
-        hdrs[7] = 'NS'
-        hdrs[8] = 'EW'
+        hdrs[8] = 'NS'
+        hdrs[9] = 'EW'
         for p in sorted(pairData.keys()):
             if self.pairID(p) == self.SITOUT:
                 continue
@@ -369,12 +365,11 @@ class PairGames(DupBridge):
     def Travelers(self):
         tblCols = []
         xMargin = 0.5
-        hdrs = [self.SITOUT, 'Contract', 'By', 'Result', '8'*4, '8'*4, 'vs.']
+        hdrs = ['NS','Contract', 'By', 'Made', 'Down', '8'*4, '8'*4, 'vs.']
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        hdrs[0] = 'NS'
-        hdrs[4] = 'NS'
-        hdrs[5] = 'EW'
+        hdrs[5] = 'NS'
+        hdrs[6] = 'EW'
         nPerPage = 4 if len(self.boardData[0]) <= 5 else 2 if len(self.boardData[0]) <= 12 else 1
         bIdx = 0
         for b,r in self.boardData.items():

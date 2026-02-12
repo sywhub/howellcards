@@ -226,20 +226,20 @@ class PDF(FPDF):
     # compute the width of each column
     # use whatever font active
     def setHeaders(self, leftMargin, hdrs, cols):
-        for i in range(len(hdrs)):
-            cols.append(self.get_string_width(hdrs[i]) + 0.2)
+        for h in hdrs:
+            cols.append(self.get_string_width(h) + 0.2)
         allW = sum(cols)
         if 'Contract' in hdrs:
             cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
-    def headerRow(self, leftMargin, y, cols, hdrs, title):
+    def headerRow(self, leftMargin, y, cols, hdrs, title, doubleHeight=False):
         self.set_xy(leftMargin, y)
         h = self.lineHeight(self.font_size_pt)
         self.cell(text=title)
         y += h
         self.set_xy(leftMargin, y)
         self.set_font(self.sansSerifFont, style='B')
-        h = self.lineHeight(self.font_size_pt)
+        h = self.lineHeight(self.font_size_pt) * (2 if doubleHeight else 1)
         for i in range(len(hdrs)):
             self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
         return y
