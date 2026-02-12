@@ -1,8 +1,10 @@
-Team Matches
-#There is a matching spreadsheet for this PDF.
-#For 4 pairs, we form 2 teams in 3 different compositions.
-#For each composition, play 2 rounds.  Each with different table seatings.
-#For each round, each table play n boards then exchange the boards.
-#Technically, we call it 12 rounds.  It's really 3 matches.
-#Instruct the players not to reveal their journal to the opponents.
-#At the end of the tournament, collect all travelers and journals.
+Operation for Team Match
+#There is a spreadsheet corresponding to this PDF for scoring.
+#This is designed for 4 pairs to play aginast each other in "team match style.  Although we still score them as pairs.
+#We form 2 teams first and play the 1st match, one team against the other. There must be two tables.
+#Each match has 4 rounds.
+#Match begins with team 1 at NS of 1st table and EW of the 2nd; team 2 the other seats.
+#Each tables get a fresh set of boards.  After they are done, tables exchange boards.  Players stay at the same positions.
+#After the 2nd round, team 2 members exchange seats with each other.  (Team 1 stays at the same seats.)
+Each table gets a new set of baords.  Repeat as above.
+#The match ends. If there are more matches, we have a new team composistion and start again.

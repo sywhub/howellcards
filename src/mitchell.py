@@ -144,7 +144,7 @@ class Mitchell(PairGames):
                 ws.cell(row-1, i+1).border = self.bottomLine
 
             ws.cell(row, 3).value = 'Average'
-            ws.cell(row,3).font = self.noChangeFont
+            ws.cell(row, 3).font = self.noChangeFont
 
             ws.cell(row, 4).value = f'=AVERAGE({self.rc2a1(avgStart, 4)}:{self.rc2a1(row-1,4)})'
             ws.cell(row, 5).value = f'=SUM({self.rc2a1(avgStart, 6)}:{self.rc2a1(row-1,6)})'
@@ -283,11 +283,12 @@ class Mitchell(PairGames):
         self.log.debug('Add results to Roster')
         sh = self.wb['Roster']
         nRows = 0
-        row = 8
+        row = 9
         divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
 
         for b in self.boardData.values():
             nRows += len(b)
+        nRows -= 1  # inclusive
         for s in range(2):
             toN = self.pairs + (1 if self.oddPairs else 0)
             for p in range(s, toN, 2):

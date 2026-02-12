@@ -75,7 +75,7 @@ class DupBridge:
                 sh.cell(row, 1).font = self.HeaderFont
                 sh.cell(row, 1).alignment = self.centerAlign
                 for j in range(0, 8-i):
-                    sh.cell(row, 2).value = j+1
+                    sh.cell(row, 2).value = j+i
                     for k in range(3):
                         sh.cell(row, 3+k).value = self.score(i, trump, j, False, k)
                         sh.cell(row, 6+k).value = self.score(i, trump, j, True, k)
@@ -280,7 +280,7 @@ class PairGames(DupBridge):
                     self.pdf.add_page()
                     y = 2 * self.pdf.margin
                 self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-                title = f"Table {t+1}, Round {r+1}, NS: {self.pairN(nsPair)}, EW: {self.pairN(ewPair)}"
+                title = f"Pickup for Table {t+1}, Round {r+1}. NS: {self.pairN(nsPair)}, EW: {self.pairN(ewPair)}"
                 self.printPickup(title, tables[t][r], tblCols, hdrs, xMargin, y)
                 bIdx += 1
                 y = self.pdf.sectionDivider(4, bIdx, xMargin)
@@ -327,15 +327,17 @@ class PairGames(DupBridge):
                 for p in pairIdx: # NS and EW pairs in "v"
                     if v[p] not in pairData:
                         pairData[v[p]] = []
-                    pairData[v[p]].append((v[0], b, v[1], v[2], v[3])) # (round, board, table, NS, EW)
+                    pairData[v[p]].append((b, v[0], v[1], v[2], v[3])) # (board, round, table, NS, EW)
         tblCols = []
         nPerPage = 2 if len(pairData[1]) < 18 else 1
         pIdx = 0
         xMargin = self.pdf.margin * 2
-        hdrs = ['Round', 'Board', 'Sit-Out', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        hdrs = ['Board', 'Round', 'Sit-Out', 'EW', 'Contract', 'By', 'Result', '8'*4, '8'*4]
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
         hdrs[2] = 'NS'  # used "sit-out" to make sure sufficient width
+        hdrs[7] = 'NS'
+        hdrs[8] = 'EW'
         for p in sorted(pairData.keys()):
             if self.pairID(p) == self.SITOUT:
                 continue
@@ -344,7 +346,7 @@ class PairGames(DupBridge):
                 self.pdf.headerFooter()
                 y = self.pdf.margin*2
             self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs ,f"Pair {self.pairID(p)} Play Journal")
+            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs ,f"Play Records for Pair {self.pairID(p)}")
             y += self.pdf.lineHeight(self.pdf.font_size_pt)
             self.pdf.set_font(size=self.pdf.linePt)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -367,10 +369,12 @@ class PairGames(DupBridge):
     def Travelers(self):
         tblCols = []
         xMargin = 0.5
-        hdrs = ['Round', 'NS', 'EW', 'Contract', 'By', 'Result', 'NS', 'EW']
+        hdrs = [self.SITOUT, 'Contract', 'By', 'Result', '8'*4, '8'*4, 'vs.']
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        tblCols[1] = self.pdf.get_string_width(self.SITOUT)+0.25
+        hdrs[0] = 'NS'
+        hdrs[4] = 'NS'
+        hdrs[5] = 'EW'
         nPerPage = 4 if len(self.boardData[0]) <= 5 else 2 if len(self.boardData[0]) <= 12 else 1
         bIdx = 0
         for b,r in self.boardData.items():
@@ -387,20 +391,19 @@ class PairGames(DupBridge):
     # Similar to Pickup slips
     def printTraveler(self, leftSide, tblCols, hdrs, bdNum, round, y):
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-        y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Board {bdNum+1} Traveler')
+        y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Travler for Board {bdNum+1}')
         y += self.pdf.lineHeight(self.pdf.font_size_pt)
         self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.linePt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        for v in round:
+        for v in sorted(round, key=lambda x: x[2]):
             self.pdf.set_xy(leftSide, y)
-            self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
             if type(v[2]) == str:
-                self.pdf.cell(tblCols[1], h, text=v[2], align='C', border=1)
+                self.pdf.cell(tblCols[0], h, text=v[2], align='C', border=1)
             else:
-                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[2])}', align='C', border=1)
-            self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
-            for c in range(3,len(hdrs)):
+                self.pdf.cell(tblCols[0], h, text=f'{self.pairN(v[2])}', align='C', border=1)
+            for c in range(1,len(hdrs)-1):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
+            self.pdf.cell(tblCols[len(hdrs)-1], h, text=f'{self.pairN(v[3])}', align='C', border=1)
             y += h
         return y
 
@@ -569,7 +572,7 @@ class PairGames(DupBridge):
             cStart = cIdx + calcStart + i*(nPlayed - 1)
             cEnd   = cStart + nPlayed - 2
             spread=f"{self.rc2a1(row, cStart)}:{self.rc2a1(row, cEnd)}"
-            sh.cell(row, cIdx+1+i).value = f'=SUM({spread})'
+            sh.cell(row, cIdx+1+i).value = f'=AVERAGE({spread})'
             sh.cell(row, cIdx+1+i).number_format = sh.cell(row, cIdx+2).number_format = "#0.0"
             opponents = [x - cursorRow for x in range(nPlayed) if x != cursorRow]
             n = nPlayed - 1
@@ -641,7 +644,7 @@ class PairGames(DupBridge):
             sh.cell(row, 1).alignment = self.centerAlign
             nPlayed = len(self.boardData[b])    # # of times this board was played
             cursorRow = 0
-            for r in self.boardData[b]: # (round, table, NS, EW)
+            for r in sorted(self.boardData[b], key=lambda x: x[2]): # (round, table, NS, EW)
                 sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(r[0] * rGap + 3, 1)}"
                 tBase = r[0] * rGap + r[1] * self.decks + 3
                 sh.cell(row, 3).value = f"='By Round'!{self.rc2a1(tBase, 2)}"

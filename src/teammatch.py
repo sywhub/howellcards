@@ -35,9 +35,10 @@ class TeamMatch(PairGames):
            f'Team Match {self.decks} per Round')
 
     # record metadata
-    def setup(self, boards, fake):
+    def setup(self, boards, match, fake):
         self.decks = boards
         self.fake = fake
+        self.matches = match
         self.initData()
         try:
             self.checkBoardData()
@@ -53,7 +54,7 @@ class TeamMatch(PairGames):
 
     # Setup boardData and roundData for parent class methods
     def initData(self):
-        self.roundData = {
+        setupData = {
             0: {0: {'NS': 1, 'EW': 3, 'Board': 0}, 1: {'NS': 4, 'EW': 2, 'Board': 1}},
             1: {0: {'NS': 1, 'EW': 3, 'Board': 1}, 1: {'NS': 4, 'EW': 2, 'Board': 0}},
             2: {0: {'NS': 1, 'EW': 4, 'Board': 2}, 1: {'NS': 3, 'EW': 2, 'Board': 3}},
@@ -69,15 +70,19 @@ class TeamMatch(PairGames):
             10: {0: {'NS': 1, 'EW': 3, 'Board': 10}, 1: {'NS': 2, 'EW': 4, 'Board': 11}},
             11: {0: {'NS': 1, 'EW': 3, 'Board': 11}, 1: {'NS': 2, 'EW': 4, 'Board': 10}}}
 
-        for r in self.roundData.keys():
-            for t in self.roundData[r].keys():
+        for r in range(self.matches * 4):
+            self.roundData[r] = {}
+            for t,tbl in setupData[r].items():
+                self.roundData[r][t] = {}
+                for k,v in tbl.items():
+                    self.roundData[r][t][k] = v
                 self.roundData[r][t]['Board'] = self.boardList(self.roundData[r][t]['Board'])
         for r,t in self.roundData.items():
-            for tbl, p in t.items():
-                for b in p['Board']:
+            for tbl,tData in self.roundData[r].items():
+                for b in tData['Board']:
                     if b not in self.boardData:
                         self.boardData[b] = []
-                    self.boardData[b].append([r, tbl, p['NS'], p['EW']])
+                    self.boardData[b].append([r, tbl, tData['NS'], tData['EW']])
 
     # Roster sheet
     # The roster tab also shows the tournament results
@@ -137,6 +142,28 @@ class TeamMatch(PairGames):
             self.pdf.cell(w=nameW, h=ht, text='', border=1)
             self.pdf.ln()
 
+        self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
+        self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
+        ht = self.pdf.lineHeight(self.pdf.font_size_pt)
+        pw = self.pdf.get_string_width('Match'+'8') + 0.25
+        nameW = (self.pdf.w - pw - 4 * self.pdf.margin) / 2
+        self.pdf.cell(w=pw, h=ht, text="Match", border=1, align='C')
+        self.pdf.cell(w=nameW, h=ht, text=f"Team 1", border=1, align='C')
+        self.pdf.cell(w=nameW, h=ht, text=f"Team 2", border=1, align='C')
+        self.pdf.ln()
+
+        self.pdf.set_font(style='', family=self.pdf.sansSerifFont)
+        ht = self.pdf.lineHeight(self.pdf.font_size_pt)
+        for m in range(self.matches):
+            self.pdf.cell(w=pw, h=ht, text=f"{m+1}", border=1, align='C')
+            self.pdf.cell(w=nameW, h=ht,
+                        text=f"Pairs {self.roundData[m*4][0]['NS']} & {self.roundData[m*4][1]['EW']}",
+                            border=1, align='C')
+            self.pdf.cell(w=nameW, h=ht,
+                        text=f"Pairs {self.roundData[m*4][0]['EW']} & {self.roundData[m*4][1]['NS']}",
+                            border=1, align='C')
+            self.pdf.ln()
+
     def boardSheetHeaders(self, sh, nTbl):
         # first row setup some spanning column headers
         mergeHdrs = [['Score', 2], ['IMP', 2], ['Net', 2]]
@@ -187,7 +214,7 @@ class TeamMatch(PairGames):
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../teammatchx{self.decks*2}'
+        fn = f'{here}/../teammatch{self.matches}x{self.decks}'
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
@@ -212,6 +239,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
     parser.add_argument('-b', '--boards', type=int, choices=range(1,5), default=2, help='Number of boards per round')
+    parser.add_argument('-m', '--match', type=int, choices=range(1,4), default=1, help='Number of matches to play')
     parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
@@ -220,5 +248,5 @@ if __name__ == '__main__':
             break
     team = TeamMatch(log)
     # A match has n rounds, each round has m boards, divided into two halves, each half of the boards
-    team.setup(boards=args.boards, fake=args.fake)
+    team.setup(boards=args.boards, match=args.match, fake=args.fake)
     team.match()
