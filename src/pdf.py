@@ -241,12 +241,7 @@ class PDF(FPDF):
         self.set_font(self.sansSerifFont, style='B')
         h = self.lineHeight(self.font_size_pt)
         for i in range(len(hdrs)):
-            if hdrs[i] == 'Made':
-                self.set_font(size=self.font_size_pt / 2)
-                self.cell(cols[i]+cols[i]+1, h/2, text='Result', align='C', border=1)
             self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
-            if hdrs[i] == 'Down':
-                self.set_font(size=self.font_size_pt)
         return y
 
     def sectionDivider(self, nSection, bIdx, leftMargin):
