@@ -232,6 +232,46 @@ class PDF(FPDF):
         if 'Contract' in hdrs:
             cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
+    def newHeaderRow(self, leftMargin, y, cols, hdrs, title):
+        self.set_xy(leftMargin, y)
+        h = self.lineHeight(self.font_size_pt)
+        self.cell(text=title)
+        y += h
+        self.set_xy(leftMargin, y)
+        self.set_font(self.sansSerifFont, style='B')
+        h = self.lineHeight(self.font_size_pt)
+        mergeCols = []
+        mergeTxt = []
+        madeCount = hdrs.count('Made')
+        while madeCount > 0:
+            mergeCols.append(hdrs.index('Made', mergeCols[-1]+1 if len(mergeCols) > 0 else 0))
+            mergeTxt.append('Result')
+            madeCount -= 1
+        if len(mergeCols) == 1 and 'NS' in hdrs and (hdrs.index('NS',mergeCols[0]) - mergeCols[0]) == 2:
+            mergeCols.append(mergeCols[-1]+2)
+            mergeTxt.append('Score')
+        merged = False
+        mergeIdx = 0
+        for i in range(len(hdrs)):
+            if i in mergeCols:
+                saveFontSize = self.font_size_pt
+                merged = True
+                saveX = self.get_x()
+                saveY = self.get_y()
+                colStart = i
+                h /= 2
+                self.set_font_size(saveFontSize/2)
+                self.cell(cols[i]+cols[i+1], h, text=mergeTxt[mergeIdx], align='C', border=1)
+                self.set_xy(saveX, saveY + self.lineHeight(saveFontSize/2))
+                mergeIdx += 1
+            self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
+            if merged and i > colStart:
+                self.set_font_size(saveFontSize)
+                h *= 2
+                self.set_xy(saveX + cols[colStart] + cols[i], saveY)
+                merged = False
+        return y
+
     def headerRow(self, leftMargin, y, cols, hdrs, title):
         self.set_xy(leftMargin, y)
         h = self.lineHeight(self.font_size_pt)

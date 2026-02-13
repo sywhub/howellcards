@@ -160,29 +160,6 @@ class Howell(PairGames):
             sh.cell(i+row, 5).value = f"{IMPsum1}+{IMPsum2}"
             sh.cell(i+row, 5).number_format = '#0.00'
         
-        IMPRow = self.pairs + row + 2
-        sh.cell(IMPRow, 1).value = 'To sort, remove single quote below'
-        IMPRow += 1
-        sh.cell(IMPRow,1).value = 'IMP Ranking'
-        sh.cell(IMPRow,1).alignment = self.centerAlign
-        sh.cell(IMPRow,1).font = self.HeaderFont
-        sh.merge_cells(f'{self.rc2a1(IMPRow, 1)}:{self.rc2a1(IMPRow,5)}')
-        IMPRow += 1
-        sh.cell(IMPRow,1).value = f"'=SORT({self.rc2a1(row, 1)}:{self.rc2a1(row+self.pairs-1,5)},4,-1)"
-        for i in range(self.pairs):
-            sh.cell(IMPRow+i,4).number_format = "#0.00"
-            sh.cell(IMPRow+i,5).number_format = "0.00%"
-        MPRow = self.pairs + IMPRow + 4
-        sh.cell(MPRow,1).value = 'MP Ranking'
-        sh.cell(MPRow,1).alignment = self.centerAlign
-        sh.cell(MPRow,1).font = self.HeaderFont
-        sh.merge_cells(f'{self.rc2a1(MPRow, 1)}:{self.rc2a1(MPRow,5)}')
-        MPRow += 1
-        sh.cell(MPRow,1).value = f"'=SORT({self.rc2a1(row, 1)}:{self.rc2a1(row+self.pairs-1,5)},5,-1)"
-        for i in range(self.pairs):
-            sh.cell(MPRow+i,4).number_format = "#0.00"
-            sh.cell(MPRow+i,5).number_format = "0.00%"
-
         # Check to make sure IMPs add up to zero
         ft = Font(bold=True,color="FF0000")
         topBorder = Border(top=Side(style='thin', color="FF0000"))
