@@ -224,8 +224,16 @@ class PairGames(DupBridge):
     # Generate spreadsheet tab of "By Round" based on "roundData"
     def roundTab(self):
         self.log.debug('Saving by Round')
-        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW']
+        mergeHdrs = [['Result', 2], ['Score', 2]]
+        headers = ['Round', 'Table', 'NS', 'EW', 'Board', 'Vul', 'Contract', 'By', 'Made', 'Down', 'NS', 'EW']
         sh = self.wb.create_sheet('By Round', 2)
+        cStart = headers.index('Made')+1
+        for h in mergeHdrs:
+            sh.cell(1, cStart).value = h[0]
+            sh.cell(1, cStart).font = self.noChangeFont
+            sh.cell(1, cStart).alignment = self.centerAlign
+            sh.merge_cells(f'{sh.cell(1,cStart).coordinate}:{sh.cell(1,cStart+h[1]-1).coordinate}')
+            cStart += h[1]
         row = self.headerRow(sh, headers, 2)
         startRow = row
         for r in sorted(self.roundData.keys()): # round
@@ -583,11 +591,11 @@ class PairGames(DupBridge):
     # Common function to print a row of "headers" stylistically
     def boardSheetHeaders(self, sh, nTbl):
         # first row setup some spanning column headers
-        mergeHdrs = [['Score', 2], ['IMP', 2], ['MP %', 2], ['MP Pts', 2], ['Net', 2],
+        mergeHdrs = [['Result', 2], ['Score', 2], ['IMP', 2], ['MP %', 2], ['MP Pts', 2], ['Net', 2],
                ['MP Calculation', nTbl*2 - 2],['IMP Calculation', nTbl*2 - 2]]
 
-        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result'] + ['NS', 'EW'] * 5
-        cStart = headers.index('Result') + 2
+        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Made', 'Down'] + ['NS', 'EW'] * 5
+        cStart = headers.index('Made')+1
         for h in mergeHdrs:
             sh.cell(1, cStart).value = h[0]
             sh.cell(1, cStart).font = self.noChangeFont
@@ -600,7 +608,7 @@ class PairGames(DupBridge):
         
     # Draw vertical lines at certain columns
     def boardVerticals(self, sh, headers, ntbl):
-        vertical = [headers.index('Result')+4]
+        vertical = [headers.index('Made')+5]
         vertical.append(vertical[-1] + 6)
         vertical.append(vertical[-1] + 2)
         vertical.append(vertical[-1] + (ntbl - 1)*2) 
@@ -653,7 +661,7 @@ class PairGames(DupBridge):
                 for i in range(2,7):
                     sh.cell(row, i).alignment = self.centerAlign
 
-                cIdx = headers.index('Result')+3
+                cIdx = headers.index('Made')+4
                 nIdx = cIdx + 7
                 self.computeNet(sh, row, cIdx-1, nIdx)
                 self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)

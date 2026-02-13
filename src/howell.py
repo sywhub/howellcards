@@ -147,11 +147,11 @@ class Howell(PairGames):
             sh.cell(i+row, 3).value = self.placeHolderName()
             sh.column_dimensions['B'].width = 25
             sh.column_dimensions['C'].width = 25
-            IMPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$L$3:$L${totalPlayed+2})"
-            MPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$N$3:$N${totalPlayed+2})"
+            IMPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$M$3:$M${totalPlayed+2})"
+            MPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$O$3:$O${totalPlayed+2})"
             if self.pairs % 2 != 0 or i != self.pairs - 1:
-                IMPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$M$3:$M${totalPlayed+2})"
-                MPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$O$3:$O${totalPlayed+2})"
+                IMPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$N$3:$N${totalPlayed+2})"
+                MPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$P$3:$P${totalPlayed+2})"
             else:
                 IMPsum2=0
                 MPsum2=0

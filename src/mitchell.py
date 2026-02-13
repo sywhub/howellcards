@@ -296,8 +296,8 @@ class Mitchell(PairGames):
                 if pName == self.SITOUT:
                     continue
                 ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+nRows,4+s)}"
-                impRange = f"'By Board'!{self.rc2a1(3, 12+s)}:{self.rc2a1(3+nRows,12+s)}"
-                sumRange = f"'By Board'!{self.rc2a1(3, 14+s)}:{self.rc2a1(3+nRows,14+s)}"
+                impRange = f"'By Board'!{self.rc2a1(3, 13+s)}:{self.rc2a1(3+nRows,13+s)}"
+                sumRange = f"'By Board'!{self.rc2a1(3, 15+s)}:{self.rc2a1(3+nRows,15+s)}"
                 sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divident}"
                 sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{impRange})"
                 sh.cell(row,4).number_format = "0.00%"
