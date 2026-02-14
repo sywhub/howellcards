@@ -15,7 +15,6 @@
 
 import argparse
 import logging
-import sys
 import os
 from maininit import setlog
 import tables as Moves

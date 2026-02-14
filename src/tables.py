@@ -120,9 +120,11 @@ class HowellSeats:
             return True
         return False
 
-def doAll():
-    for k,v in HowellSeats.GoodTables.items():
-        for i, seating in enumerate(v):
+# List all validated seatings
+# Test iterable implementation
+def listAllSeatings():
+    for k in sorted(HowellSeats.GoodTables.keys()):
+        for i in range(len(HowellSeats.GoodTables[k])):
             tournament = []
             print(f'For {k} tables, seating #{i}:')
             howellSeats = HowellSeats(k*2, None, i)
@@ -132,4 +134,4 @@ def doAll():
             howellSeats.validateTournament(tournament)
 
 if __name__ == '__main__':
-    doAll()
+    listAllSeatings()
