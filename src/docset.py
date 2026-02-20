@@ -305,7 +305,7 @@ class PairGames(DupBridge):
     def printPickup(self, title, boards, tblCols, hdrs, xMargin, y):
         y += self.pdf.lineHeight(self.pdf.font_size_pt)
         self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.notePt)
-        y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, title)
+        y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, title, 'Pickup')
         self.pdf.set_font(size=self.pdf.notePt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         y += h
@@ -350,7 +350,7 @@ class PairGames(DupBridge):
                 self.pdf.headerFooter()
                 y = self.pdf.margin*2
             self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs ,f"Play Records for Pair {self.pairID(p)}")
+            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs ,f"Pair: {self.pairID(p)}", 'Play Records')
             y += self.pdf.lineHeight(self.pdf.font_size_pt)
             self.pdf.set_font(size=self.pdf.linePt)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -395,7 +395,7 @@ class PairGames(DupBridge):
     # Similar to Pickup slips
     def printTraveler(self, leftSide, tblCols, hdrs, bdNum, round, y):
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-        y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Travler for Board {bdNum+1}')
+        y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Board {bdNum+1}', 'Traveler')
         y += self.pdf.lineHeight(self.pdf.font_size_pt)
         self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.linePt)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)

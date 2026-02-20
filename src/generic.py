@@ -47,6 +47,7 @@ class GenericPDF:
         return y
 
     def printPickup(self):
+        self.log.debug(f'print Pickup Slips')
         tblCols = []
         xMargin = self.pdf.margin
         hdrs = ['NS Score', 'Made', 'Down', 'NS Contract', 'By', 'Board', 'EW Contract', 'By', 'Made', 'Down', 'EW Socre']
@@ -78,6 +79,7 @@ class GenericPDF:
             self.pdf.set_xy(xMargin, y)
 
     def printRecords(self):
+        self.log.debug(f'print Play Records')
         tblCols = []
         pIdx = 0
         xMargin = self.pdf.margin * 2
@@ -109,10 +111,10 @@ class GenericPDF:
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../generic'
+        fn = f'{here}/../generic.pdf'
         self.log.debug(f'Save files: {fn}')
-        self.pdf.output(f'{fn}.pdf')
-        print(f'Saved {fn}.{{xlsx,pdf}}')
+        self.pdf.output(fn)
+        print(f'Saved {fn}')
 
 
     def printPDF(self):

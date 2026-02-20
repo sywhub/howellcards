@@ -98,6 +98,9 @@ should collect these at the end of the tournament.
 
 The use of player journals is optional, particularly among experience players.
 
+# Generic Forms
+Program "generic.py" creates a PDF file for generic "empty" scoring forms.
+
 # History
 
 Edwin Howell is credited for Howell movement.  In late 1800s, he invented
@@ -113,10 +116,6 @@ https://en.wikipedia.org/wiki/Room_square problem.  The obscure
 mathematical problem was widely researched in the early 1900s and
 considered solved.  Before computer, people published the solutions for
 simpler cases.  Computers then have solved it for very big cases.
-
-Howell's solved the Room Square problem quite cleverly.  We got the hint of
-his methodology by observing the many published tournament arrangements.  I
-have not discovered publication on the exact algoirthm.
 
 ## Technical Requirements
 
