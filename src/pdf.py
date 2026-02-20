@@ -232,10 +232,15 @@ class PDF(FPDF):
         if 'Contract' in hdrs:
             cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
-    def newHeaderRow(self, leftMargin, y, cols, hdrs, title):
+    def headerRow(self, leftMargin, y, cols, hdrs, leftTitle, rightTitle=None):
         self.set_xy(leftMargin, y)
         h = self.lineHeight(self.font_size_pt)
-        self.cell(text=title)
+        self.cell(text=leftTitle)
+        if rightTitle is not None and len(rightTitle) > 0:
+            rWidth = self.get_string_width(rightTitle)
+            tblWidth = sum(cols)
+            self.set_xy(leftMargin + tblWidth - rWidth, y)
+            self.cell(text=rightTitle)
         y += h
         self.set_xy(leftMargin, y)
         self.set_font(self.sansSerifFont, style='B')
@@ -270,18 +275,6 @@ class PDF(FPDF):
                 h *= 2
                 self.set_xy(saveX + cols[colStart] + cols[i], saveY)
                 merged = False
-        return y
-
-    def headerRow(self, leftMargin, y, cols, hdrs, title):
-        self.set_xy(leftMargin, y)
-        h = self.lineHeight(self.font_size_pt)
-        self.cell(text=title)
-        y += h
-        self.set_xy(leftMargin, y)
-        self.set_font(self.sansSerifFont, style='B')
-        h = self.lineHeight(self.font_size_pt)
-        for i in range(len(hdrs)):
-            self.cell(cols[i], h, text=hdrs[i], align='C', border=1)
         return y
 
     def sectionDivider(self, nSection, bIdx, leftMargin):

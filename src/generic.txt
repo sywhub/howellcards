@@ -1,0 +1,3 @@
+Generic Forms for Pair-wise Tournaments
+#These are ACBL-similar forms for scoring.
+#Print them out, xerox the desired number, cut them along the dotted lines.
