@@ -232,15 +232,16 @@ class PDF(FPDF):
         if 'Contract' in hdrs:
             cols[hdrs.index('Contract')] += self.epw - allW - leftMargin
 
-    def headerRow(self, leftMargin, y, cols, hdrs, leftTitle, rightTitle=None):
-        self.set_xy(leftMargin, y)
-        h = self.lineHeight(self.font_size_pt)
-        self.cell(text=leftTitle)
+    def headerRow(self, leftMargin, y, cols, hdrs, leftTitle=None, rightTitle=None):
+        if leftTitle != None:
+            self.set_xy(leftMargin, y)
+            self.cell(text=leftTitle)
         if rightTitle is not None and len(rightTitle) > 0:
             rWidth = self.get_string_width(rightTitle)
             tblWidth = sum(cols)
-            self.set_xy(leftMargin + tblWidth - rWidth, y)
+            self.set_xy(leftMargin + tblWidth - rWidth - 2*self.c_margin, y)
             self.cell(text=rightTitle)
+        h = self.lineHeight(self.font_size_pt)
         y += h
         self.set_xy(leftMargin, y)
         self.set_font(self.sansSerifFont, style='B')

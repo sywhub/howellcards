@@ -447,7 +447,7 @@ class PairGames(DupBridge):
             if nsTexts != None and ewTexts != None:
                 self.pdf.inkEdgeText(nsTexts[t], ewTexts[t])
             self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=fontSize)
-            self.pdf.headerRow(xMargin, top, tblCols, hdrs, ' ')
+            self.pdf.headerRow(xMargin, top, tblCols, hdrs)
             self.pdf.set_font(size=fontSize)
             y = self.pdf.get_y()
             h = self.pdf.lineHeight(self.pdf.font_size_pt);
