@@ -89,6 +89,7 @@ class Mitchell(PairGames):
         self.boardData = {}
         if self.pairs == 8 and self.square:
             self.loadSquare()   # square Mitchell
+            self.initRounds()
         elif self.tables % 2 == 0: 
             self.loadEven() # self.pairs in [11, 12, 15, 16]
         else:  # standard Mitchell
@@ -99,7 +100,7 @@ class Mitchell(PairGames):
                         if (b + bset) not in self.boardData:
                             self.boardData[b+bset] = []
                         self.boardData[b+bset].append([r, t, self.NSPair(r, t), self.EWPair(r, t)])
-        self.initRounds()
+            self.initRounds()
         self.checkBoardData()
 
     def roster(self):
@@ -204,7 +205,7 @@ class Mitchell(PairGames):
 
     def setTableTexts(self):
         self.log.debug('Setting Table borders')
-        if self.pairs == 8:
+        if self.pairs == 8 and self.square:
             # The trade-off of square is the iregularity of movements
             ewText = ['R2 to T2/EW, R3 to T3/EW, R4 to T2/EW',
                         'R2 to T1/EW, R3 to T4/EW, R4 to T1/EW',
@@ -261,16 +262,17 @@ class Mitchell(PairGames):
 
     def loadEven(self):
         self.roundData = {}
-        for r in range(self.tables):
+        for r in range(self.tables - 1):
             self.roundData[r] = {}
             for t in range(self.tables):
                 self.roundData[r][t] = []
-                bIdx = t if t <= 2 else t + 1
-                bIdx += r
-                if bIdx > self.tables:
-                    bIdx -= self.tables + 1
+                bIdx = t + r
+                if bIdx >= self.tables:
+                    bIdx -= self.tables
                 blist = [self.decks*bIdx+x for x in range(self.decks)]
                 self.roundData[r][t] = {'NS': self.NSPair(r, t), 'EW': self.EWPair(r,t), 'Board': blist}
+                if r >= self.tables // 2:
+                    self.roundData[r][t]['EW'] = self.EWPair(r+1,t)
         self.boardData = {}
         for r,tbl in self.roundData.items():
             for t,d in tbl.items():
