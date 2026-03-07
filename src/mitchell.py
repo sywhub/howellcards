@@ -18,12 +18,13 @@ import datetime
 # Pair 0 is the sit-out phantom pair
 # Externally, they are number 1 to n for both NS and EW sides
 class Mitchell(PairGames):
-    def __init__(self, log, p, b, f):
+    def __init__(self, log, p, b, sq, f):
         super().__init__(log)
         self.pairs = p
         self.decks = b
         self.tables = (self.pairs + 1) // 2
         self.oddPairs = self.pairs % 2 == 1
+        self.square = sq
         self.fake = f
         self.pdf = pdf.PDF()
         self.wb = Workbook()
@@ -86,8 +87,8 @@ class Mitchell(PairGames):
     # Generate "boardData" and "roundData"
     def initData(self):
         self.boardData = {}
-        if self.pairs == 8:
-            self.loadSquare()   # squaure Mitchell
+        if self.pairs == 8 and self.square:
+            self.loadSquare()   # square Mitchell
         elif self.tables % 2 == 0: 
             self.loadEven() # self.pairs in [11, 12, 15, 16]
         else:  # standard Mitchell
@@ -310,6 +311,8 @@ class Mitchell(PairGames):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
         fn = f'{here}/../mitchell{self.pairs}x{self.decks}{"xF" if self.fake else ""}'
+        if self.pairs == 8 and self.square:
+            fn += 'Sq'
         self.log.debug(f'Save files: {fn}')
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
@@ -329,10 +332,11 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--boards', type=int, choices=range(1,7), default=4, help='Boards per round')
     parser.add_argument('-p', '--pair', type=int, choices=range(8,25), default=8, help='Number of pairs')
     parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
+    parser.add_argument('-s', '--square', action='store_true', help='Use square movement for 4 tables')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
         if args.debug.upper() == l[0]:
             log.setLevel(l[1])
             break
-    mitchell = Mitchell(log, args.pair, args.boards, args.fake)
+    mitchell = Mitchell(log, args.pair, args.boards, args.square, args.fake)
     mitchell.main()
