@@ -191,6 +191,13 @@ class PairGames(DupBridge):
     def pairN(self, n):
         return n + 1
 
+    def pairID(self, n):
+        return f'{self.pairN(n)}'
+
+    def pairSide(self, n):
+        return '';
+
+
     # turn pair number to string
     def pairID(self, n):
         return f"{self.pairN(n)}"
@@ -332,72 +339,87 @@ class PairGames(DupBridge):
                     if v[p] not in pairData:
                         pairData[v[p]] = []
                     pairData[v[p]].append((b, v[0], v[1], v[2], v[3])) # (board, round, table, NS, EW)
+
         tblCols = []
-        nPerPage = 2 if len(pairData[1]) < 18 else 1
+        hdrs = ['Board', 'vs.', 'Bid'*2, 'By', 'M', 'M', 'NS', 'EW']
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt+2)
+        self.pdf.setHeaders(0, hdrs, tblCols)
+        xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
+        hdrs[2] = 'Bid'
+        hdrs[4] = 'Made'
+        hdrs[5] = 'Down'
+        nPerPage = 2
         pIdx = 0
-        xMargin = self.pdf.margin * 2
-        hdrs = ['Board', 'Round', 'Sit-Out', 'EW', 'Contract', 'By', 'Made', 'Down', '8'*4, '8'*4]
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-        self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        hdrs[2] = 'NS'  # used "sit-out" to make sure sufficient width
-        hdrs[8] = 'NS'
-        hdrs[9] = 'EW'
-        for p in sorted(pairData.keys()):
-            if self.pairID(p) == self.SITOUT:
+        halfW = self.pdf.w / 2
+        y = self.pdf.margin
+        startY = y
+        flip = 0
+        for pairNum in sorted(pairData.keys()):
+            if self.pairID(pairNum) == self.SITOUT:
                 continue
-            if pIdx % nPerPage == 0:
+            if pIdx % nPerPage == 0 and flip == 0:
                 self.pdf.add_page()
                 self.pdf.headerFooter()
-                y = self.pdf.margin*2
-            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-            y = self.pdf.headerRow(xMargin, y, tblCols, hdrs ,f"Pair: {self.pairID(p)}", 'Play Records')
+                startY = self.pdf.margin
+                y = startY
+                flip = 0
+            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt)
+            y = self.pdf.headerRow(xMargin+halfW*flip, y, tblCols, hdrs ,self.pairID(pairNum)+" "*10+"Names:", "Play Records")
             y += self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_font(size=self.pdf.linePt)
+            self.pdf.set_font(size=self.pdf.smallPt-1)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_xy(xMargin, y)
-            for v in sorted(pairData[p], key=lambda x: x[0]):
+            self.pdf.set_xy(xMargin+halfW*flip, y)
+            for v in sorted(pairData[pairNum], key=lambda x: x[0]):
                 self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{v[1]+1}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(v[3])}', align='C', border=1)
-                self.pdf.cell(tblCols[3], h, text=f'{self.pairN(v[4])}', align='C', border=1)
-                for c in range(4,len(hdrs)):
+                vIdx = 4 if self.pairSide(pairNum) == 'NS' else 3
+                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[vIdx])}', align='C', border=1)
+                for c in range(2,len(hdrs)):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
                 y += h
-                self.pdf.set_xy(xMargin, y)
-            pIdx += 1
-            y = self.pdf.sectionDivider(nPerPage, pIdx, self.pdf.margin)
+                self.pdf.set_xy(xMargin+halfW*flip, y)
+            flip = 1 - flip
+            if flip == 0:
+                pIdx += 1
+                startY = self.pdf.sectionDivider(nPerPage, pIdx, self.pdf.margin)
+            y = startY
         return
 
     # Traveler goes with each board and "travel" among tables
     # Data {pair #: [(round, table, NS, EW), ...], ...}
     def Travelers(self):
         tblCols = []
-        xMargin = 0.5
-        hdrs = [self.SITOUT,'Contract', 'By', 'Made', 'Down', '8'*4, '8'*4, 'vs.']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-        self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        hdrs[0] = 'NS'
-        hdrs[5] = 'NS'
-        hdrs[6] = 'EW'
-        nPerPage = 4 if len(self.boardData[0]) <= 5 else 2 if len(self.boardData[0]) <= 12 else 1
+        hdrs = ['NS','Bid'*2, 'By', 'M', 'M', 'NS', 'EW', 'vs.']
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt+1)
+        self.pdf.setHeaders(0, hdrs, tblCols)
+        xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
+        halfW = self.pdf.w / 2
+        hdrs[1] = 'Bid'
+        hdrs[3] = 'Made'
+        hdrs[4] = 'Down'
+        nPerPage = 4 if len(self.boardData[0]) <= 8 else 2
         bIdx = 0
-        for b,r in self.boardData.items():
-            if bIdx % nPerPage == 0:
+        flip = 0
+        startY = self.pdf.margin
+        for b in sorted(self.boardData.keys()):
+            if bIdx % nPerPage == 0 and flip == 0:
                 self.pdf.add_page()
-                y = 0.5
-            y = self.printTraveler(xMargin, tblCols, hdrs, b, r, y)
-            bIdx += 1
-            if nPerPage > 1:
-                y = self.pdf.sectionDivider(nPerPage, bIdx, xMargin)
+                startY = self.pdf.margin;
+                y = startY
+            y = self.printTraveler(xMargin+halfW*flip, tblCols, hdrs, b, self.boardData[b], y)
+            flip = 1 - flip
+            if flip == 0:
+                bIdx += 1
+                startY = self.pdf.sectionDivider(nPerPage, bIdx, self.pdf.margin)
+            y = startY
         return
 
     # We may use this to print extra blank travelers.
     # Similar to Pickup slips
     def printTraveler(self, leftSide, tblCols, hdrs, bdNum, round, y):
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt+1)
         y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Board {bdNum+1}', 'Traveler')
         y += self.pdf.lineHeight(self.pdf.font_size_pt)
-        self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.linePt)
+        self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.notePt+1)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         for v in sorted(round, key=lambda x: x[2]):
             self.pdf.set_xy(leftSide, y)

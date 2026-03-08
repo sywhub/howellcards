@@ -39,7 +39,6 @@ class GenericPDF:
         hdrs[3] = 'Made'
         hdrs[4] = 'Down'
         self.pdf.add_page()
-        #self.pdf.headerFooter()
         y = self.pdf.margin
         for b in range(self.nPerPg):
             y = self.printOneTraveler(xMargin, tblCols, hdrs, y)
