@@ -198,10 +198,13 @@ class Mitchell(PairGames):
         self.metaData = {'Title': 'Mitchell Tournament', 'Info': []}
         self.metaData['Info'].append(('Pairs', self.pairs))
         self.metaData['Info'].append(('Tables', self.tables))
-        if self.tables % 2 == 0:
-            self.metaData['Info'].append(('Relay between ', f"{self.tables // 2} and {self.tables // 2 + 1}"))
         self.metaData['Info'].append(('Rounds', self.pairs // 2 - 1))
         self.metaData['Info'].append(('Boards per round', self.decks))
+        if self.tables % 2 == 0:
+            if self.tables == 4 and self.square:
+                self.metaData['Info'].append(('Square Movement', ''))
+            else:
+                self.metaData['Info'].append((f'EW pairs skip a table after round {self.tables // 2}',""))
 
     def setTableTexts(self):
         self.log.debug('Setting Table borders')

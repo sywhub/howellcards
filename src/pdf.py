@@ -94,9 +94,11 @@ class PDF(FPDF):
         h = self.lineHeight(self.font_size_pt)
         self.set_xy(x, y)
         for t in meta['Info']:
+            txt = f"{t[0]}" + (f': {t[1]}' if t[1] != '' else '')
+            x = self.setHCenter(self.get_string_width(txt))
             y += h
             self.set_xy(x, y)
-            self.cell(text=f"{t[0]}: {t[1]}")
+            self.cell(text=txt)
         return self.get_y()
 
     # Board tab references its data from the Round tab, for consistency
