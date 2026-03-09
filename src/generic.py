@@ -8,10 +8,11 @@
 # These numbers were reasonable for normal amateur tournaments and optimal for 8x11 paper and human friendly font size.
 #
 import pdf
+import datetime
+from docset import PairGames
 
-class GenericPDF:
+class GenericPDF(PairGames):
     def __init__(self):
-        import datetime
         self.pdf = pdf.PDF()
         self.notice = 'For public domain. No rights reserved. Generated on'
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',' ')
@@ -29,40 +30,17 @@ class GenericPDF:
         self.pdf.cell(text=self.orgNotice)
         self.pdf.set_font_size(fSize)
 
-    def printTravler(self):
-        tblCols = []
-        hdrs = ['NS','Bid'*2, 'By', 'M', 'M', 'NS', 'EW', 'vs.']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt+1)
-        self.pdf.setHeaders(0, hdrs, tblCols)
-        xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
-        hdrs[1] = 'Bid'
-        hdrs[3] = 'Made'
-        hdrs[4] = 'Down'
-        self.pdf.add_page()
-        y = self.pdf.margin
-        for b in range(self.nPerPg):
-            y = self.printOneTraveler(xMargin, tblCols, hdrs, y)
-            y = self.pdf.sectionDivider(self.nPerPg, b+1, xMargin)
-        return
+    def fakeBoardData(self):
+        bData = {}
+        for b in range(8):
+            bData[b] = []
+            for t in range(8):
+                bData[b].append((None,None,str(t+1),None))    # round, table, NS, EW
+        return bData
 
-    def printOneTraveler(self, leftSide, tblCols, hdrs, y):
-        halfW = self.pdf.w / 2
-        startY = y
-        for i in range(2):
-            y = startY
-            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt+1)
-            y = self.pdf.headerRow(leftSide + halfW * i, y, tblCols, hdrs, 'Board:', 'Traveler')
-            y += self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.notePt+1)
-            h = self.pdf.lineHeight(self.pdf.font_size_pt)
-            for r in range(8):
-                self.pdf.set_xy(leftSide+halfW*i, y)
-                self.pdf.cell(tblCols[0], h, text=f'{r+1}', align='C', border=1)
-                for c in range(len(hdrs)-1):
-                    self.pdf.cell(tblCols[c+1], h, text='', align='C', border=1)
-                y += h
-            self.printOrg(i, halfW, y)
-        return y
+    def printTravler(self):
+        self.TravelersWithData(self.fakeBoardData())
+        return
 
     def printPickup(self):
         tblCols = []

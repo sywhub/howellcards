@@ -345,9 +345,9 @@ class PairGames(DupBridge):
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt+2)
         self.pdf.setHeaders(0, hdrs, tblCols)
         xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
-        hdrs[2] = 'Bid'
-        hdrs[4] = 'Made'
-        hdrs[5] = 'Down'
+        hdrs[hdrs.index('Bid'*2)] = 'Bid'
+        hdrs[hdrs.index('M')] = 'Made'
+        hdrs[hdrs.index('M')] = 'Down'
         nPerPage = 2
         pIdx = 0
         halfW = self.pdf.w / 2
@@ -387,25 +387,28 @@ class PairGames(DupBridge):
     # Traveler goes with each board and "travel" among tables
     # Data {pair #: [(round, table, NS, EW), ...], ...}
     def Travelers(self):
+        self.TravelersWithData(self.boardData)
+    
+    def TravelersWithData(self, data):
         tblCols = []
         hdrs = ['NS','Bid'*2, 'By', 'M', 'M', 'NS', 'EW', 'vs.']
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt+1)
         self.pdf.setHeaders(0, hdrs, tblCols)
         xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
         halfW = self.pdf.w / 2
-        hdrs[1] = 'Bid'
-        hdrs[3] = 'Made'
-        hdrs[4] = 'Down'
-        nPerPage = 4 if len(self.boardData[0]) <= 8 else 2
+        hdrs[hdrs.index('Bid'*2)] = 'Bid'
+        hdrs[hdrs.index('M')] = 'Made'
+        hdrs[hdrs.index('M')] = 'Down'
+        nPerPage = 4 if len(data[0]) <= 8 else 2
         bIdx = 0
         flip = 0
         startY = self.pdf.margin
-        for b in sorted(self.boardData.keys()):
+        for b in sorted(data.keys()):
             if bIdx % nPerPage == 0 and flip == 0:
                 self.pdf.add_page()
                 startY = self.pdf.margin;
                 y = startY
-            y = self.printTraveler(xMargin+halfW*flip, tblCols, hdrs, b, self.boardData[b], y)
+            y = self.printTraveler(xMargin+halfW*flip, tblCols, hdrs, b, data[b], y)
             flip = 1 - flip
             if flip == 0:
                 bIdx += 1
@@ -417,7 +420,8 @@ class PairGames(DupBridge):
     # Similar to Pickup slips
     def printTraveler(self, leftSide, tblCols, hdrs, bdNum, round, y):
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt+1)
-        y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, f'Board {bdNum+1}', 'Traveler')
+        leftTitle = f'Board: {(bdNum+1) if round[0][0] != None else ""}'
+        y = self.pdf.headerRow(leftSide, y, tblCols, hdrs, leftTitle, 'Traveler')
         y += self.pdf.lineHeight(self.pdf.font_size_pt)
         self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.notePt+1)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -429,7 +433,8 @@ class PairGames(DupBridge):
                 self.pdf.cell(tblCols[0], h, text=f'{self.pairN(v[2])}', align='C', border=1)
             for c in range(1,len(hdrs)-1):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
-            self.pdf.cell(tblCols[len(hdrs)-1], h, text=f'{self.pairN(v[3])}', align='C', border=1)
+            vs = f'{self.pairN(v[3]) if v[3] != None else ""}'
+            self.pdf.cell(tblCols[len(hdrs)-1], h, text=vs, align='C', border=1)
             y += h
         return y
 
