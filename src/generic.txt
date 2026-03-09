@@ -1,5 +1,5 @@
 Generic Forms for Pair-wise Tournaments
 #These are ACBL-similar forms for scoring.
-#Print them out, xerox the desired number, cut them along the dotted lines.
+#Print them out, xerox the desired copies, cut them along the dotted lines.
 #Director should request players to fill out the information during the 1st round or pre-fill them prior to game begins.
 #It's a good idea to put board # on the back of the travelers as well.

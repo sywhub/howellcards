@@ -13,6 +13,7 @@ from docset import PairGames
 
 class GenericPDF(PairGames):
     def __init__(self):
+        super().__init__(None)
         self.pdf = pdf.PDF()
         self.notice = 'For public domain. No rights reserved. Generated on'
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',' ')
@@ -30,16 +31,19 @@ class GenericPDF(PairGames):
         self.pdf.cell(text=self.orgNotice)
         self.pdf.set_font_size(fSize)
 
-    def fakeBoardData(self):
+    def pairN(self, n):
+        return '' if n == None else n
+
+    def pairID(self, n):
+        return 'Pair:'+' '* 4
+
+    def printTravler(self):
         bData = {}
         for b in range(8):
             bData[b] = []
             for t in range(8):
                 bData[b].append((None,None,str(t+1),None))    # round, table, NS, EW
-        return bData
-
-    def printTravler(self):
-        self.TravelersWithData(self.fakeBoardData())
+        self.TravelersWithData(bData)
         return
 
     def printPickup(self):
@@ -74,6 +78,13 @@ class GenericPDF(PairGames):
             self.pdf.set_xy(xMargin, y)
 
     def printRecords(self):
+        jData = {}
+        for pairNum in range(4):
+            jData[pairNum] = []
+            for b in range(30):
+                jData[pairNum].append((b, None, None, None, None))
+        self.JournalWithData(jData)
+        return
         tblCols = []
         hdrs = ['Board', 'vs.', 'Bid'*2, 'By', 'M', 'M', 'NS', 'EW']
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt+2)

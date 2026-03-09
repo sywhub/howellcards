@@ -339,7 +339,9 @@ class PairGames(DupBridge):
                     if v[p] not in pairData:
                         pairData[v[p]] = []
                     pairData[v[p]].append((b, v[0], v[1], v[2], v[3])) # (board, round, table, NS, EW)
+        self.JournalWithData(pairData)
 
+    def JournalWithData(self, pairData):
         tblCols = []
         hdrs = ['Board', 'vs.', 'Bid'*2, 'By', 'M', 'M', 'NS', 'EW']
         self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt+2)
@@ -372,7 +374,7 @@ class PairGames(DupBridge):
             for v in sorted(pairData[pairNum], key=lambda x: x[0]):
                 self.pdf.cell(tblCols[0], h, text=f'{v[0]+1}', align='C', border=1)
                 vIdx = 4 if self.pairSide(pairNum) == 'NS' else 3
-                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(v[vIdx])}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f"{self.pairN(v[vIdx])}", align='C', border=1)
                 for c in range(2,len(hdrs)):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
                 y += h
@@ -427,10 +429,7 @@ class PairGames(DupBridge):
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         for v in sorted(round, key=lambda x: x[2]):
             self.pdf.set_xy(leftSide, y)
-            if type(v[2]) == str:
-                self.pdf.cell(tblCols[0], h, text=v[2], align='C', border=1)
-            else:
-                self.pdf.cell(tblCols[0], h, text=f'{self.pairN(v[2])}', align='C', border=1)
+            self.pdf.cell(tblCols[0], h, text=f'{self.pairN(v[2])}', align='C', border=1)
             for c in range(1,len(hdrs)-1):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
             vs = f'{self.pairN(v[3]) if v[3] != None else ""}'
