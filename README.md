@@ -5,6 +5,9 @@ tournaments.  They are designed for small tournaments organized by casual direct
 large events, people typically use ACBL tools.
 The files come in pairs with matching names differ only by their extention of "PDF" or "xlsx".  TD should peruse the PDF file to decide which parts, if not all, to print.
 
+# Generic Scoring Slips
+For TD who has everything but just need extra scoring slips.  This PDF file provides generic travelers, pickup slips, and play records.
+
 # Team Match
 This is for 4 pairs of players to play 3 matches in "team" format. For each
 match, they form 2 teams and play 2 rounds.  For each round, a pair of a
