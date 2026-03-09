@@ -3,7 +3,7 @@
 # Meant to be printed, copied, and cut into slips
 # Travelers good for 8 rounds of play
 # Pickup slip good for 6 boards per round
-# Play Record good for 24 boards for the tournament
+# Play Record good for 30 boards for the tournament
 #
 # These numbers were reasonable for normal amateur tournaments and optimal for 8x11 paper and human friendly font size.
 #
@@ -18,25 +18,16 @@ class GenericPDF(PairGames):
         self.notice = 'For public domain. No rights reserved. Generated on'
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',' ')
         self.nPerPg = 4
-        self.orgNotice = 'Sunnyvale Senior Center Bridge Club'
     
-    def printOrg(self, shift, width, y):
-        return
-        w = self.pdf.get_string_width(self.orgNotice) - self.pdf.c_margin
-        x = (width - w) / 2
-        fSize = self.pdf.font_size_pt
-        self.pdf.set_font(style='I', size=self.pdf.tinyPt)
-        y += self.pdf.lineHeight(self.pdf.tinyPt) / 2
-        self.pdf.set_xy(x+shift*width, y)
-        self.pdf.cell(text=self.orgNotice)
-        self.pdf.set_font_size(fSize)
-
+    # placeholders to facilitate reusing code in PairGames
     def pairN(self, n):
         return '' if n == None else n
 
     def pairID(self, n):
         return 'Pair:'+' '* 4
 
+    # Fake data to reuse code
+    # Print one sheet of 8 travelers each for 8 boards
     def printTravler(self):
         bData = {}
         for b in range(8):
@@ -44,39 +35,17 @@ class GenericPDF(PairGames):
             for t in range(8):
                 bData[b].append((None,None,str(t+1),None))    # round, table, NS, EW
         self.TravelersWithData(bData)
-        return
 
-    def printPickup(self):
-        tblCols = []
-        hdrs = ['NS Score', 'M', 'D', 'NS Bid', 'By', 'Board', 'EW Bid', 'By', 'M', 'M', 'EW Socre']
-        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.linePt+1)
-        hdrs[1] = hdrs[8] = 'Made'
-        hdrs[2] = hdrs[9] = 'Down'
-        self.pdf.setHeaders(0, hdrs, tblCols)
-        xMargin = (self.pdf.w - sum(tblCols))/2
-        self.pdf.add_page()
-        y = self.pdf.margin
-        for bIdx in range(8):
-            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.tinyPt)
-            self.printOnePickup(tblCols, hdrs, xMargin, y)
-            y = self.pdf.sectionDivider(8, bIdx+1, xMargin)
-            y -= self.pdf.pt2in(self.pdf.tinyPt)
-        return
+    # Fake data to reuse code
+    # PairGames' function will print extra sheet of 4 pickup slips.  That's the only thing we want.
+    def Pickups(self):
+        tables = {0: {0: []}}
+        for i in range(6):
+            tables[0][0].append({'NS': None, 'EW': None, 'Board': None})
+        self.PickupsWithData(tables)
 
-    def printOnePickup(self, tblCols, hdrs, xMargin, y):
-        y += self.pdf.lineHeight(self.pdf.font_size_pt)
-        self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.tinyPt)
-        y = self.pdf.headerRow(xMargin, y, tblCols, hdrs, 'Table:'+' '*20+'Round:'+' '*20+'NS:'+' '*20+'EW:', 'Pickup Slip')
-        self.pdf.set_font(size=self.pdf.tinyPt)
-        h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        y += h
-        self.pdf.set_xy(xMargin, y)
-        for b in range(6):
-            for i in range(len(hdrs)):
-                self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
-            y += h
-            self.pdf.set_xy(xMargin, y)
-
+    # Fake data to reuse code
+    # Just enough to fit one page, 4 slips of 30 boards each
     def printRecords(self):
         jData = {}
         for pairNum in range(4):
@@ -84,38 +53,6 @@ class GenericPDF(PairGames):
             for b in range(30):
                 jData[pairNum].append((b, None, None, None, None))
         self.JournalWithData(jData)
-        return
-        tblCols = []
-        hdrs = ['Board', 'vs.', 'Bid'*2, 'By', 'M', 'M', 'NS', 'EW']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt+2)
-        self.pdf.setHeaders(0, hdrs, tblCols)
-        xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
-        hdrs[2] = 'Bid'
-        hdrs[4] = 'Made'
-        hdrs[5] = 'Down'
-        self.pdf.add_page()
-        nPerPage = 2
-        halfW = self.pdf.w / 2
-        y = self.pdf.margin
-        startY = y
-        for p in range(nPerPage):  # two sets each page
-            for i in range(2):
-                y = startY
-                self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt)
-                y = self.pdf.headerRow(xMargin+halfW*i, y, tblCols, hdrs ,"Pair:"+" "*20+"Names:", "Play Records")
-                y += self.pdf.lineHeight(self.pdf.font_size_pt)
-                self.pdf.set_font(size=self.pdf.smallPt-1)
-                h = self.pdf.lineHeight(self.pdf.font_size_pt)
-                self.pdf.set_xy(xMargin+halfW*i, y)
-                for v in range(30): # 24 boards for the tournament
-                    self.pdf.cell(tblCols[0], h, text=f'{v+1}', align='C', border=1)
-                    for c in range(1,len(hdrs)):
-                        self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
-                    y += h
-                    self.pdf.set_xy(xMargin+halfW*i, y)
-                self.printOrg(i, halfW, y)
-            startY = self.pdf.sectionDivider(nPerPage, p+1, self.pdf.margin)
-        return
 
     def save(self):
         import os
@@ -128,7 +65,7 @@ class GenericPDF(PairGames):
     def printPDF(self):
         self.pdf.instructions(None, 'generic.txt')
         self.printTravler()
-        self.printPickup()
+        self.Pickups()
         self.printRecords()
         self.save()
         return

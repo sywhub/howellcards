@@ -274,24 +274,29 @@ class PairGames(DupBridge):
                 if v[0] not in tables[v[1]]:
                     tables[v[1]][v[0]] = []
                 tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
+        self.PickupsWithData(tables)
+
+    def PickupsWithData(self, tables):
+        emptyTitle = f"Table: {" "*5} Round: {" "*3} NS: {" "*5} EW: {" "*3}"
         tblCols = []
         xMargin = self.pdf.margin
         hdrs = ['NS Score', 'Made', 'Down', 'NS Contract', 'By', 'Board', 'EW Contract', 'By', 'Made', 'Down', 'EW Socre']
         self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.notePt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        xMargin = (self.pdf.w - sum(tblCols)) / 2
         bIdx = 0
         for t in sorted(tables.keys()):
             # the sit-out table
             for r in sorted(tables[t].keys()):
                 nsPair = tables[t][r][0]['NS']
                 ewPair = tables[t][r][0]['EW']
-                if self.ifSitout(t, nsPair, ewPair):
+                if nsPair == None or ewPair == None or self.ifSitout(t, nsPair, ewPair):
                     continue
                 if bIdx % 4 == 0:
                     self.pdf.add_page()
                     y = 2 * self.pdf.margin
                 self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
-                title = f"Pickup for Table {t+1}, Round {r+1}. NS: {self.pairN(nsPair)}, EW: {self.pairN(ewPair)}"
+                title = f"Table: {t+1} Round: {r+1} NS: {self.pairN(nsPair)} EW: {self.pairN(ewPair)}"
                 self.printPickup(title, tables[t][r], tblCols, hdrs, xMargin, y)
                 bIdx += 1
                 y = self.pdf.sectionDivider(4, bIdx, xMargin)
@@ -303,8 +308,7 @@ class PairGames(DupBridge):
             if bIdx % 4 == 0:
                 self.pdf.add_page()
                 y = 2 * self.pdf.margin
-            title = f"Table {" "*3}, Round {" "*3}, NS: {" "*3}, EW: {" "*3}"
-            self.printPickup(title, ['']*len(tables[0][0]), tblCols, hdrs, xMargin, y)
+            self.printPickup(emptyTitle, ['']*len(tables[0][0]), tblCols, hdrs, xMargin, y)
             bIdx += 1
             y = self.pdf.sectionDivider(4, bIdx, xMargin)
         return
@@ -321,7 +325,7 @@ class PairGames(DupBridge):
         for b in boards:
             for i in range(boardCol):
                 self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
-            bText = f'{b["Board"]+1}' if type(b) != str else b
+            bText = f'{(b["Board"]+1) if (type(b) != str and b["Board"] != None) else b}'
             self.pdf.cell(tblCols[5], h, text=bText, align='C', border=1)
             for i in range(boardCol+1,len(hdrs)):
                 self.pdf.cell(tblCols[i], h, text=f'', align='C', border=1)
