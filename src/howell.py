@@ -43,7 +43,7 @@ class Howell(PairGames):
         return n if n != 0 else self.SITOUT
 
     def pairID(self, n):
-        return f"{n if n != 0 else self.SITOUT}"
+        return f"{('Pair '+ str(n)) if n != 0 else self.SITOUT}"
 	
     def ifSitout(self, t, ns, ew):
         return ns == 0
