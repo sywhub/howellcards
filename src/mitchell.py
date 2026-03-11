@@ -75,11 +75,11 @@ class Mitchell(PairGames):
         self.boardTab()
         self.IMPTable() # static sheet
         self.ScoreTable()   # static sheet, produced to aid human TD, not used elsewhere.
-        self.idTags()  # PDF only
+        #self.idTags()  # PDF only
         self.setTableTexts()  # PDF only
-        self.Pickups()  # PDF only
         self.Travelers()  # PDF only
         self.Journal()  # PDF only
+        self.Pickups()  # PDF only
         self.save()
         return
 

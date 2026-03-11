@@ -65,8 +65,8 @@ class GenericPDF(PairGames):
     def printPDF(self):
         self.pdf.instructions(None, 'generic.txt')
         self.printTravler()
-        self.Pickups()
         self.printRecords()
+        self.Pickups()
         self.save()
         return
 

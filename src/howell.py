@@ -209,8 +209,8 @@ class Howell(PairGames):
         self.idTags()
         self.movementTables()
         self.Travelers()
-        self.Pickups()
         self.Journal()
+        self.Pickups()
         self.save()
 
 def howellFromJson(log, pairs, fake, jsonfile):
