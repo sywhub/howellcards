@@ -622,10 +622,11 @@ class PairGames(DupBridge):
         return
 
     # Common function to print a row of "headers" stylistically
-    def boardSheetHeaders(self, sh, nTbl):
+    def boardSheetHeaders(self, sh):
+        nPlayed = len(self.boardData[0])
         # first row setup some spanning column headers
         mergeHdrs = [['Result', 2], ['Score', 2], ['IMP', 2], ['MP %', 2], ['MP Pts', 2], ['Net', 2],
-               ['MP Calculation', nTbl*2 - 2],['IMP Calculation', nTbl*2 - 2]]
+               ['MP Calculation', nPlayed*2 - 2],['IMP Calculation', nPlayed*2 - 2]]
 
         headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Made', 'Down'] + ['NS', 'EW'] * 5
         cStart = headers.index('Made')+1
@@ -635,16 +636,16 @@ class PairGames(DupBridge):
             sh.cell(1, cStart).alignment = self.centerAlign
             sh.merge_cells(f'{sh.cell(1,cStart).coordinate}:{sh.cell(1,cStart+h[1]-1).coordinate}')
             cStart += h[1]
-        headers += [['NS MP Scores', nTbl - 1], ['EW MP Scores', nTbl - 1], ['NS IMP Pair-wise', nTbl - 1], ['EW IMP Pair-wise', nTbl - 1]]
+        headers += [['NS MP Scores', nPlayed - 1], ['EW MP Scores', nPlayed - 1], ['NS IMP Pair-wise', nPlayed - 1], ['EW IMP Pair-wise', nPlayed - 1]]
         row = self.headerRow(sh, headers, 2)
         return (row, headers)
         
     # Draw vertical lines at certain columns
-    def boardVerticals(self, sh, headers, ntbl):
+    def boardVerticals(self, sh, headers):
         vertical = [headers.index('Made')+5]
         vertical.append(vertical[-1] + 6)
         vertical.append(vertical[-1] + 2)
-        vertical.append(vertical[-1] + (ntbl - 1)*2) 
+        vertical.append(vertical[-1] + (len(self.boardData[0]) - 1)*2) 
         for c in vertical:
             for r in range(2,sh.max_row+1):
                 bd = sh.cell(r, c).border
@@ -674,7 +675,7 @@ class PairGames(DupBridge):
     def boardTab(self):
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 1)
-        row, headers = self.boardSheetHeaders(sh, self.tables)
+        row, headers = self.boardSheetHeaders(sh)
         rGap = self.tables * self.decks    # Number of rows between each round
         for b in sorted(self.boardData.keys()):
             sh.cell(row, 1).value = b+1     # board #
@@ -705,7 +706,7 @@ class PairGames(DupBridge):
                 cursorRow += 1
             for c in range(len(headers)+(self.tables-1)*4-4):
                 sh.cell(row-1, c+1).border = self.bottomLine
-        self.boardVerticals(sh, headers, self.tables)
+        self.boardVerticals(sh, headers)
         return
     
     # Some simple validity checks
