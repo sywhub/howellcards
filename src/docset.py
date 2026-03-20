@@ -348,7 +348,7 @@ class PairGames(DupBridge):
     def JournalWithData(self, pairData):
         tblCols = []
         hdrs = ['Board', 'vs.', 'Bid'*2, 'By', 'M', 'M', 'NS', 'EW']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt+2)
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt)
         self.pdf.setHeaders(0, hdrs, tblCols)
         xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
         hdrs[hdrs.index('Bid'*2)] = 'Bid'
@@ -398,7 +398,7 @@ class PairGames(DupBridge):
     def TravelersWithData(self, data):
         tblCols = []
         hdrs = ['NS','Bid'*2, 'By', 'M', 'M', 'NS', 'EW', 'vs.']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt+1)
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(0, hdrs, tblCols)
         xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
         halfW = self.pdf.w / 2

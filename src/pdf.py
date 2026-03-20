@@ -176,14 +176,13 @@ class PDF(FPDF):
 
     def tableAnchors(self, t):
         saveMargin = self.margin
-        self.set_margin(0)
         self.set_font_size(self.anchorFontSize)
         tWidth = self.get_string_width(t)
         tHeight = self.pt2in(self.anchorFontSize)
         for corner in range(4):
             match corner:
                 case 0:
-                    x = tWidth
+                    x = tWidth + self.margin * 2
                     y = tHeight
                     rot = 180
                 case 1:
@@ -191,7 +190,7 @@ class PDF(FPDF):
                     y = tHeight
                     rot = 180
                 case 2:
-                    x = 0
+                    x = self.margin * 2
                     y = self.eph - tHeight
                     rot = 0
                 case 3:
