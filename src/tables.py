@@ -12,6 +12,8 @@
 # Implement as a Python iterator
 from maininit import setlog
 import logging
+from collections import Counter
+
 
 # The constructor and the iterator members (__iter__ and __next__) are "for real".
 # Other member functions are experimental code.
@@ -104,21 +106,20 @@ class HowellSeats:
         valid = True
         for r in tournament:
             for i in range(0, len(r), 2):
-                if not self.checkMember(matches, r[i], r[i+1]) or \
-                    not self.checkMember(matches, r[i+1], r[i]):
-                    self.log.info(f'{r[i]} and {r[i+1]} met before')
-                    valid = False
-                    break
+                if r[i] not in matches:
+                    matches[r[i]] = []
+                if r[i+1] not in matches:
+                    matches[r[i+1]] = []
+                matches[r[i]].append(r[i+1])
+                matches[r[i+1]].append(r[i])
+        for p,against in matches.items():
+            against = Counter(against)
+            eachAgainst = [v for k,v in against.items()]
+            allEncoutners = Counter(eachAgainst)
+            valid = len(allEncoutners) == 1
+            if not valid:
+                break
         return valid
-
-    # has we seen this pair before?
-    def checkMember(self, members, k, v):
-        if k not in members:
-            members[k] = set()
-        if v not in members[k]:
-            members[k].add(v)
-            return True
-        return False
 
 # List all validated seatings
 # Test iterable implementation

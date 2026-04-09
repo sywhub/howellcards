@@ -5,6 +5,7 @@
 from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.worksheet.errors import IgnoredError
 import random
+from collections import Counter
 
 # Duplicate Bridge
 class DupBridge:
@@ -715,6 +716,7 @@ class PairGames(DupBridge):
     def checkBoardData(self):
         if not hasattr(self, 'boardData') or len(self.boardData) <= 0:
             return False
+        
         pData = {}
         # No one can play the same board more than once
         for b,t in self.boardData.items():
@@ -733,11 +735,14 @@ class PairGames(DupBridge):
         for t in self.roundData.values():
             for tbl in t.values():
                 for s in [0,1]:
-                    if tbl[sides[s]] not in pData[tbl[sides[1-s]]]['Against']:
-                        pData[tbl[sides[1-s]]]['Against'].append(tbl[sides[s]])
-                    else:
-                        raise ValueError('Same Pair', tbl[sides[1-s]], tbl[sides[s]])
+                    pData[tbl[sides[1-s]]]['Against'].append(tbl[sides[s]])
 
+        for t,p in pData.items():
+            against = Counter(p['Against'])
+            eachAgainst = [v for k,v in against.items()]
+            allEncoutners = Counter(eachAgainst)
+            if len(allEncoutners) > 1:
+                raise ValueError('Different encounter')
         # There are some "soft" rules
         # Players should play the same boards, at least the same number of boards
         # Boards should not appear on different tables for the same round

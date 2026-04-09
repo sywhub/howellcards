@@ -89,9 +89,9 @@ class JsonIO:
 
     def validateData(self):
         self.log.info(f'Validating {self.pairs}-pair tournament data')
-        ret =  self.validateMovement() and \
-            self.validatePairs() and \
-            self.validateBoards()
+        ret =  self.validateMovement()
+        ret = ret and self.validatePairs()
+        ret = ret and self.validateMovement()
         self.log.info(f'{self.pairs}-pair data {"validated" if ret else "invalid"}')
         return ret
 
