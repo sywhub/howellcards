@@ -138,7 +138,12 @@ class Howell(PairGames):
         sh.cell(row, 5).alignment = self.centerAlign
         row += 1
 
-        totalPlayed = int((self.pairs + self.pairs % 2) / 2) * self.decks * (self.pairs - 1)
+        divident = len(self.roundData) * len(self.roundData[0][0]['Board']) * (len(self.boardData[0]) - 1)
+        lastRow = 3
+        for b in self.boardData.values():
+            lastRow += len(b)
+        lastRow -= 1  # inclusive
+
         for i in range(self.pairs):
             sh.cell(i+row, 1).value = i+1
             sh.cell(i+row, 1).font = self.HeaderFont
@@ -147,15 +152,18 @@ class Howell(PairGames):
             sh.cell(i+row, 3).value = self.placeHolderName()
             sh.column_dimensions['B'].width = 25
             sh.column_dimensions['C'].width = 25
-            IMPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$M$3:$M${totalPlayed+2})"
-            MPsum1 = f"=SUMIF('By Board'!$D$3:$D${totalPlayed+2},\"={i+1}\",'By Board'!$O$3:$O${totalPlayed+2})"
+            pairRef = f'"="&{self.rc2a1(i+row, 1)}'
+            range1 = f"'By Board'!{self.rc2a1(3, 4)}:{self.rc2a1(lastRow,4)}"
+            range2 = f"'By Board'!{self.rc2a1(3, 5)}:{self.rc2a1(lastRow,5)}"
+            IMPsum1 = f"=SUMIF({range1},{pairRef},'By Board'!{self.rc2a1(3, 13)}:{self.rc2a1(lastRow,13)})"
+            MPsum1 = f"=SUMIF({range1},{pairRef},'By Board'!{self.rc2a1(3, 17)}:{self.rc2a1(lastRow,17)})"
             if self.pairs % 2 != 0 or i != self.pairs - 1:
-                IMPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$N$3:$N${totalPlayed+2})"
-                MPsum2 = f"SUMIF('By Board'!$E$3:$E${totalPlayed+2},\"={i+1}\",'By Board'!$P$3:$P${totalPlayed+2})"
+                IMPsum2 = f"SUMIF({range2},{pairRef},'By Board'!{self.rc2a1(3, 14)}:{self.rc2a1(lastRow,14)})"
+                MPsum2 = f"SUMIF({range2},{pairRef},'By Board'!{self.rc2a1(3, 18)}:{self.rc2a1(lastRow,18)})"
             else:
                 IMPsum2=0
                 MPsum2=0
-            sh.cell(i+row, 4).value = f"{MPsum1}/{self.decks*(self.pairs-1)}+{MPsum2}/{self.decks*(self.pairs-1)}"
+            sh.cell(i+row, 4).value = f"{MPsum1}/{divident}+{MPsum2}/{divident}"
             sh.cell(i+row, 4).number_format = '0.0%'
             sh.cell(i+row, 5).value = f"{IMPsum1}+{IMPsum2}"
             sh.cell(i+row, 5).number_format = '#0.00'

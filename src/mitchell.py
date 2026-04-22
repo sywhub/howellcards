@@ -288,22 +288,22 @@ class Mitchell(PairGames):
     def results(self):
         self.log.debug('Add results to Roster')
         sh = self.wb['Roster']
-        boardRows = 0
+        lastRows = 0
         row = len(self.metaData['Info']) + 4 + 1    # Copyright, Title, a Spacer, and score table row, plus sheet is 1-based
         divident = len(self.roundData) * len(self.roundData[0][0]['Board']) * (len(self.boardData[0]) - 1)
 
         for b in self.boardData.values():
-            boardRows += len(b)
-        boardRows -= 1  # inclusive
+            lastRows += len(b)
+        lastRows -= 1  # inclusive
         for s in range(2):
             toN = self.pairs + (1 if self.oddPairs else 0)
             for p in range(s, toN, 2):
                 pName = self.pairN(p+1)
                 if pName == self.SITOUT:
                     continue
-                ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+boardRows,4+s)}"
-                impRange = f"'By Board'!{self.rc2a1(3, 13+s)}:{self.rc2a1(3+boardRows,13+s)}"
-                sumRange = f"'By Board'!{self.rc2a1(3, 17+s)}:{self.rc2a1(3+boardRows,17+s)}"
+                ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+lastRows,4+s)}"
+                impRange = f"'By Board'!{self.rc2a1(3, 13+s)}:{self.rc2a1(3+lastRows,13+s)}"
+                sumRange = f"'By Board'!{self.rc2a1(3, 17+s)}:{self.rc2a1(3+lastRows,17+s)}"
                 sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divident}"
                 sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{impRange})"
                 sh.cell(row,4).number_format = "0.00%"
