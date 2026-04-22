@@ -290,7 +290,8 @@ class Mitchell(PairGames):
         sh = self.wb['Roster']
         lastRows = 0
         row = len(self.metaData['Info']) + 4 + 1    # Copyright, Title, a Spacer, and score table row, plus sheet is 1-based
-        divident = len(self.roundData) * len(self.roundData[0][0]['Board']) * (len(self.boardData[0]) - 1)
+        divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
+        divident *= len(self.boardData[0]) - (1 if self.boardData[len(self.boardData)-1][0][2] != 0 else 2)
 
         for b in self.boardData.values():
             lastRows += len(b)

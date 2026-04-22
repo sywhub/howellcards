@@ -138,7 +138,8 @@ class Howell(PairGames):
         sh.cell(row, 5).alignment = self.centerAlign
         row += 1
 
-        divident = len(self.roundData) * len(self.roundData[0][0]['Board']) * (len(self.boardData[0]) - 1)
+        divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
+        divident *= len(self.boardData[0]) - (1 if self.boardData[0][0][2] != 0 else 2)
         lastRow = 3
         for b in self.boardData.values():
             lastRow += len(b)
