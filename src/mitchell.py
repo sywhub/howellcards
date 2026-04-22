@@ -290,7 +290,7 @@ class Mitchell(PairGames):
         sh = self.wb['Roster']
         boardRows = 0
         row = len(self.metaData['Info']) + 4 + 1    # Copyright, Title, a Spacer, and score table row, plus sheet is 1-based
-        divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
+        divident = len(self.roundData) * len(self.roundData[0][0]['Board']) * (len(self.boardData[0]) - 1)
 
         for b in self.boardData.values():
             boardRows += len(b)
@@ -303,7 +303,7 @@ class Mitchell(PairGames):
                     continue
                 ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+boardRows,4+s)}"
                 impRange = f"'By Board'!{self.rc2a1(3, 13+s)}:{self.rc2a1(3+boardRows,13+s)}"
-                sumRange = f"'By Board'!{self.rc2a1(3, 15+s)}:{self.rc2a1(3+boardRows,15+s)}"
+                sumRange = f"'By Board'!{self.rc2a1(3, 17+s)}:{self.rc2a1(3+boardRows,17+s)}"
                 sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divident}"
                 sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{impRange})"
                 sh.cell(row,4).number_format = "0.00%"
