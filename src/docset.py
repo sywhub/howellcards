@@ -593,7 +593,7 @@ class PairGames(DupBridge):
                 # Otherwise, a win is 1 pt, tie 0.5, and lost 0.o
                 cmpF = f"=IF(ISNUMBER({self.rc2a1(row, netIdx+i)}),IF(ISNUMBER({self.rc2a1(row+opponents[rCmp], netIdx+i)}),"
                 cmpF += f"IF({self.rc2a1(row, netIdx+i)}>{self.rc2a1(row+opponents[rCmp], netIdx+i)},{Win},"
-                cmpF += f'IF({self.rc2a1(row, netIdx+i)}={self.rc2a1(row+opponents[rCmp], netIdx+i)},{Tie},{Lost})),""),"")'
+                cmpF += f'IF({self.rc2a1(row, netIdx+i)}={self.rc2a1(row+opponents[rCmp], netIdx+i)},{Tie},{Lost})),{Tie}),{Tie})'
                 targetC = cIdx+calcStart+rCmp+i*n
                 sh.cell(row, targetC).value = cmpF
 
