@@ -30,7 +30,7 @@ class Mitchell(PairGames):
         self.wb = Workbook()
 
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
-            f'Mitchell Tournament: {(self.pairs+1)//2} Tables, {self.decks} Boards per round')
+            f'Mitchell {"Square" if sq else "Tournament"}: {(self.pairs+1)//2} Tables, {self.decks} Boards per round')
         # initData must be the first one
         self.initData()
         self.meta()
