@@ -366,7 +366,6 @@ class PairGames(DupBridge):
                 continue
             if pIdx % nPerPage == 0 and flip == 0:
                 self.pdf.add_page()
-                self.pdf.headerFooter()
                 startY = self.pdf.margin
                 y = startY
                 flip = 0
@@ -473,6 +472,7 @@ class PairGames(DupBridge):
             if self.ifSitout(t, tables[t][0][0]['NS'], tables[t][0][0]['EW']):
                 continue
             self.pdf.add_page()
+            self.pdf.pageFooter(self.pairs, self.tables)
             self.pdf.movementSheet()
             if compassTop > top + tblHeight:
                 self.pdf.compass()

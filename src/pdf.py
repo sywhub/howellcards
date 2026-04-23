@@ -53,35 +53,32 @@ class PDF(FPDF):
     def headerFooter(self):
         self.set_font(size=self.tinyPt)
         h = self.lineHeight(self.font_size_pt)
-        w = self.get_string_width(self.headerText)
-        x = self.setHCenter(w)
-        self.set_xy(x, h)
-        self.cell(text=self.headerText)
-        w = self.get_string_width(self.footerText)
-        x = self.setHCenter(w)
-        y = self.eph - h * 2
-        self.set_xy(x, y)
-        self.cell(text=self.footerText)
+        if len(self.headerText) > 0:
+            w = self.get_string_width(self.headerText)
+            x = self.setHCenter(w)
+            self.set_xy(x, h)
+            self.cell(text=self.headerText)
+        if len(self.footerText) > 0:
+            w = self.get_string_width(self.footerText)
+            x = self.setHCenter(w)
+            y = self.eph - h 
+            self.set_xy(x, y)
+            self.cell(text=self.footerText)
     
-    # put the (none) copyright notice on top
-    # (Old habit dies hard)
-    def noright(self, log, txt):
+    # Footer at each page to help sorting papers
+    def pageFooter(self, pairs, tbls):
+        self.secFooter(self.eph)
+
+    def secFooter(self, pageBottom):
+        if len(self.footerText) <= 0:
+            return
         self.set_font(size=PDF.tinyPt)
         h = self.lineHeight(self.font_size_pt)
-        w = self.get_string_width(txt)
+        w = self.get_string_width(self.footerText)
         x = self.setHCenter(w)
-        self.set_xy(x, h)
-        self.cell(text=txt)
-        return
-
-    # Footer at each page to help sorting papers
-    def footer(self):
-        if not hasattr(self, 'Pairs') or not hasattr(self, 'Tables'):
-            return
-        footerText = f'Howell Movement for {self.Pairs} Pairs and {self.Tables} Tables'
-        self.set_font(size=PDF.tinyPt)
-        self.set_xy(self.margin, self.h - self.pt2in(self.font_size_pt)*4)
-        self.cell(text=footerText)
+        y = pageBottom - h
+        self.set_xy(x, y)
+        self.cell(text=self.footerText)
 
     def meta(self, meta):
         self.set_font(self.serifFont, style='B', size=self.rosterPt) 
@@ -194,7 +191,7 @@ class PDF(FPDF):
                     y = self.eph - tHeight
                     rot = 0
                 case 3:
-                    x = self.w - tWidth
+                    x = self.w - tWidth * 2
                     y = self.eph - tHeight
                     rot = 0
             # self.circle(x, y, radius, 'D')
@@ -283,6 +280,7 @@ class PDF(FPDF):
         h = self.lineHeight(self.font_size_pt)
         secIdx = bIdx % nSection
         if secIdx == 0:
+            self.secFooter(self.eph)
             return self.get_y() + h
         secY = (self.h - 0.5) / nSection
         y = secY * (secIdx % nSection) + 0.5 - h
@@ -290,42 +288,5 @@ class PDF(FPDF):
         self.set_dash_pattern(dash=0.1, gap=0.1)
         self.line(x1=leftMargin, y1=y, x2=self.w - leftMargin, y2=y)
         self.set_dash_pattern()
+        self.secFooter(y)
         return y + h
-
-def experimentPDF(pdf):
-    pdf.set_margin(0)
-    pdf.line(0, pdf.h / 2, pdf.w, pdf.h / 2)
-    pdf.line(0, pdf.h / 2, pdf.w, pdf.h / 2)
-    pdf.line(pdf.w / 2, 0, pdf.w / 2, pdf.h)
-    pdf.set_xy(pdf.w / 2, pdf.h / 2)
-    pdf.set_dash_pattern(dash=0.1, gap=0.1)
-    pdf.line(0, pdf.h / 2+pdf.pt2in(pdf.font_size_pt), pdf.w, pdf.h / 2+pdf.pt2in(pdf.font_size_pt))
-    pdf.line(0, pdf.h / 2-pdf.font_size, pdf.w, pdf.h / 2-pdf.font_size)
-    pdf.set_dash_pattern()
-    t = 'Hello'
-    pdf.star(pdf.w/2, pdf.h/2, 0.2, 1, 4, 0, 'D')
-    pdf.line(pdf.w/2-1, pdf.h / 2-1, pdf.w/2+1, pdf.h / 2-1)
-    for a in [0, 90, 180, 270]:
-        pdf.set_xy(pdf.w / 2, pdf.h / 2)
-        with pdf.rotation(angle=a):
-            pdf.cell(w=None, h=pdf.font_size, text=f'{t} @ {a}')
-    anchor = '8'
-    aW = pdf.get_string_width(anchor) * 1.5
-    aH = pdf.pt2in(pdf.font_size_pt)
-    pdf.set_xy(aW, aH)
-    with pdf.rotation(angle=180):
-        pdf.cell(text='6')
-    pdf.set_xy(pdf.w-aW, aH)
-    with pdf.rotation(angle=180):
-        pdf.cell(text='7')
-    pdf.set_xy(0, pdf.h-aH)
-    pdf.cell(text='8')
-    pdf.set_xy(pdf.w-aW, pdf.h-aH)
-    pdf.cell(text='9')
-
-
-
-if __name__ == '__main__':
-    pdf = PDF()
-    experimentPDF(pdf)
-    pdf.output('experment.pdf')
