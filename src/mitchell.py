@@ -13,12 +13,14 @@ from openpyxl.styles import Font
 import pdf
 from docset import PairGames
 import datetime
+import os
+import json5
 
 # Pairs are internally numbered 1,3,5,... for EW pairs and 2,4,6,... for NS
 # Pair 0 is the sit-out phantom pair
 # Externally, they are number 1 to n for both NS and EW sides
 class Mitchell(PairGames):
-    def __init__(self, log, p, b, sq, f):
+    def __init__(self, log, p, b, sq, f, nameFile):
         super().__init__(log)
         self.pairs = p
         self.decks = b
@@ -29,8 +31,17 @@ class Mitchell(PairGames):
         self.pdf = pdf.PDF()
         self.wb = Workbook()
 
+        self.nameObj = {'File': f'mitchell{self.pairs}x{self.decks}{"xF" if self.fake else ""}',
+                    'Tournament': f'Mitchell Movement for {self.pairs} Pairs, {self.decks} boards round',
+                    'Players': []}
+        if nameFile and os.path.exists(nameFile):
+            try:
+                with open(nameFile, 'r') as f:
+                    self.nameObj = json5.load(f)
+            except:
+                pass
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
-            f'Mitchell {"Square" if sq else "Tournament"}: {(self.pairs+1)//2} Tables, {self.decks} Boards per round')
+            self.nameObj['Tournament'])
         # initData must be the first one
         self.initData()
         self.meta()
@@ -316,7 +327,7 @@ class Mitchell(PairGames):
     def save(self):
         import os
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../mitchell{self.pairs}x{self.decks}{"xF" if self.fake else ""}'
+        fn = f'{here}/../{self.nameObj['File']}'
         if self.pairs == 8 and self.square:
             fn += 'Sq'
         self.log.debug(f'Save files: {fn}')
@@ -338,11 +349,12 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--boards', type=int, choices=range(1,7), default=4, help='Boards per round')
     parser.add_argument('-p', '--pair', type=int, choices=range(8,25), default=8, help='Number of pairs')
     parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
+    parser.add_argument('-n', '--names', type=str, default="", help='Names in the tournament')
     parser.add_argument('-s', '--square', action='store_true', help='Use square movement for 4 tables')
     args = parser.parse_args()
     for l in [['INFO', logging.INFO], ['DEBUG', logging.DEBUG], ['ERROR', logging.ERROR]]:
         if args.debug.upper() == l[0]:
             log.setLevel(l[1])
             break
-    mitchell = Mitchell(log, args.pair, args.boards, args.square, args.fake)
+    mitchell = Mitchell(log, args.pair, args.boards, args.square, args.fake, args.names)
     mitchell.main()

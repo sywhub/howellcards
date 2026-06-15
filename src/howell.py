@@ -18,23 +18,34 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 import logging
 import jsonIO
+import json5
 from maininit import setlog
 from docset import PairGames
 
 class Howell(PairGames):
-    def __init__(self, log, toFake, pairs, tourney):
+    def __init__(self, log, toFake, pairs, decks, tourney, nameFile):
         super().__init__(log)
         self.fake = toFake
         self.pdf = pdf.PDF()
         self.wb = Workbook()
         self.pairs = pairs
+        self.decks = decks
         self.tourneyData = tourney
+        self.nameObj = {'File': f'howell{self.pairs}x{self.decks}{"xF" if self.fake else ""}',
+                    'Tournament': f'Howell Movement for {self.pairs} Pairs, {self.decks} boards round',
+                    'Players': []}
+        if nameFile and os.path.exists(nameFile):
+            try:
+                with open(nameFile, 'r') as f:
+                    self.nameObj = json5.load(f)
+            except:
+                pass
         self.init()
         return
 
     def save(self):
         here = os.path.dirname(os.path.abspath(__file__))
-        fn = f'{here}/../howell{self.pairs}{"xF" if self.fake else ""}'
+        fn = f'{here}/../{self.nameObj['File']}'
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
@@ -43,7 +54,10 @@ class Howell(PairGames):
         return n if n != 0 else self.SITOUT
 
     def pairID(self, n):
-        return f"{('Pair '+ str(n)) if n != 0 else self.SITOUT}"
+        idStr = f"{('Pair '+ str(n)) if n != 0 else self.SITOUT}"
+        if len(self.nameObj['Players']) > 0:
+            idStr = f'{str(n)} ({self.nameObj['Players'][n-1]})'
+        return idStr
 	
     def ifSitout(self, t, ns, ew):
         return ns == 0
@@ -62,10 +76,6 @@ class Howell(PairGames):
     # Initialize some state.
     # Create meta and roster sheets
     def init(self):
-        if self.pairs <= 6:
-            self.decks = 3
-        else:
-            self.decks = 2
         self.boardData = {}
         for r in range(len(self.tourneyData['Arrangement'])):
             for t in range(len(self.tourneyData['Arrangement'][r])):
@@ -85,7 +95,7 @@ class Howell(PairGames):
             ['Rounds',nRound], ['Boards per round',self.decks], ['Total Boards to play', self.decks*nRound]]}
 
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
-           f'Howell Movement for {self.pairs} Pairs')
+            self.nameObj['Tournament'])
 
     # Present the same data table-oriented
     def movementTables(self):
@@ -146,11 +156,14 @@ class Howell(PairGames):
         lastRow -= 1  # inclusive
 
         for i in range(self.pairs):
+            names = [self.placeHolderName(), self.placeHolderName()]
+            if len(self.nameObj['Players']) == self.pairs:
+                names = [x.strip() for x in self.nameObj['Players'][i].split('+')]
             sh.cell(i+row, 1).value = i+1
             sh.cell(i+row, 1).font = self.HeaderFont
             sh.cell(i+row, 1).alignment = self.centerAlign
-            sh.cell(i+row, 2).value = self.placeHolderName()
-            sh.cell(i+row, 3).value = self.placeHolderName()
+            sh.cell(i+row, 2).value = names[0]
+            sh.cell(i+row, 3).value = names[1]
             sh.column_dimensions['B'].width = 25
             sh.column_dimensions['C'].width = 25
             pairRef = f'"="&{self.rc2a1(i+row, 1)}'
@@ -199,11 +212,15 @@ class Howell(PairGames):
         self.pdf.set_xy(leftM, y)
         self.pdf.set_font(self.pdf.sansSerifFont, size=(self.pdf.bigPt if self.pairs < 19 else self.pdf.linePt)) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
+        names = ["", ""]
         for i in range(self.pairs):
+            if len(self.nameObj['Players']) == self.pairs:
+                names = [x.strip() for x in self.nameObj['Players'][i].split('+')]
+
             self.pdf.set_xy(leftM, y)
             self.pdf.cell(widths[0], h, text=f'{self.pairN(i+1)}', align='C', border=1)
-            self.pdf.cell(widths[1], h, text='', align='C', border=1)
-            self.pdf.cell(widths[2], h, text='', align='C', border=1)
+            self.pdf.cell(widths[1], h, text=names[0], align='C', border=1)
+            self.pdf.cell(widths[2], h, text=names[1], align='C', border=1)
             y += h
 
     def go(self):
@@ -222,11 +239,11 @@ class Howell(PairGames):
         self.Pickups()
         self.save()
 
-def howellFromJson(log, pairs, fake, jsonfile):
+def howellFromJson(log, pairs, decks, fake, nameFile, jsonfile):
     jIO = jsonIO.JsonIO(pairs, log)
     tourney = jIO.load(jsonfile)
     if tourney:
-        doc = Howell(log, fake, pairs, tourney)
+        doc = Howell(log, fake, pairs, decks, tourney, nameFile)
         doc.go()
 
 if __name__ == '__main__':
@@ -234,6 +251,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--pair', type=int, choices=range(4,15), help='# of pairs in the tournament')
     parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
+    parser.add_argument('-b', '--boards', type=int, choices=range(1,7), default=3, help='Boards per round')
+    parser.add_argument('-n', '--names', type=str, default="", help='Names in the tournament')
     parser.add_argument('-d', '--debug', type=str, default='INFO')
     parser.add_argument('-j', '--jsonfile', type=str)
     args = parser.parse_args()
@@ -243,8 +262,8 @@ if __name__ == '__main__':
             break
 
     if args.pair: 
-        howellFromJson(log, args.pair, args.fake, args.jsonfile)
+        howellFromJson(log, args.pair, args.boards, args.fake, args.names, args.jsonfile)
     elif args.pair is None:
         for p in range(4,8):
-            howellFromJson(log, p, args.fake, args.jsonfile)
+            howellFromJson(log, p, args.boards, args.fake, args.names, args.jsonfile)
 

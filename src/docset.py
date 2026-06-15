@@ -370,7 +370,7 @@ class PairGames(DupBridge):
                 y = startY
                 flip = 0
             self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt)
-            y = self.pdf.headerRow(xMargin+halfW*flip, y, tblCols, hdrs ,self.pairID(pairNum)+" "*10+"Names:", "Play Records")
+            y = self.pdf.headerRow(xMargin+halfW*flip, y, tblCols, hdrs ,self.pairID(pairNum), "Play Records")
             y += self.pdf.lineHeight(self.pdf.font_size_pt)
             self.pdf.set_font(size=self.pdf.smallPt-1)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)

@@ -142,7 +142,7 @@ class PDF(FPDF):
         self.line(starCenter[0]-1, starCenter[1], starCenter[0]+1, starCenter[1])
         self.line(starCenter[0], starCenter[1]-1, starCenter[0], starCenter[1]+1)
         self.set_xy(starCenter[0]-self.get_string_width('N')/1.5, starCenter[1]-PDF.starRadius-h)
-        self.cell(None,h,text='N')
+        self.cell(h,text='N')
 
     def moveInstruction(self, tbl, nextNS, nextEW):
         # movement instructions
