@@ -58,6 +58,8 @@ class Mitchell(PairGames):
 
     # identify the side of the pair
     def pairID(self, n):
+        if len(self.nameObj['Players']) == self.pairs:
+            return self.nameObj['Players'][n-1]
         return f"{self.pairSide(n)} {self.pairN(n)}" if n != 0 else self.SITOUT
 
     # assign NS pair number
@@ -145,11 +147,15 @@ class Mitchell(PairGames):
                 pName = self.pairN(p+1)
                 if pName == self.SITOUT:
                     continue
+                if len(self.nameObj['Players']) == self.pairs:
+                    useNames = [x.strip() for x in self.nameObj['Players'][p].split('+')]
+                else:
+                    useNames = [self.placeHolderName(), self.placeHolderName()]
                 ws.cell(row, 1).font = self.HeaderFont
                 ws.cell(row, 1).alignment = self.centerAlign
                 ws.cell(row, 1).value = pName
-                ws.cell(row, 2).value = self.placeHolderName()
-                ws.cell(row, 3).value = self.placeHolderName()
+                ws.cell(row, 2).value = useNames[0]
+                ws.cell(row, 3).value = useNames[1]
                 row += 1
 
             # draw a line
@@ -194,9 +200,13 @@ class Mitchell(PairGames):
             y += h
             self.pdf.set_xy(leftM, y)
             for p in range(start, self.pairs + 1, 2):
+                if len(self.nameObj['Players']) == self.pairs:
+                    useNames = [x.strip() for x in self.nameObj['Players'][p-1].split('+')]
+                else:
+                    useNames = ['', '']
                 self.pdf.cell(widths[0], h, text=f'{self.pairN(p)}', align='C', border=1)
-                self.pdf.cell(widths[1], h, text='', align='C', border=1)
-                self.pdf.cell(widths[2], h, text='', align='C', border=1)
+                self.pdf.cell(widths[1], h, text=useNames[0], align='C', border=1)
+                self.pdf.cell(widths[2], h, text=useNames[1], align='C', border=1)
                 y += h
                 self.pdf.set_xy(leftM, y)
             start -= 1
