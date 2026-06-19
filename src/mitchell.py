@@ -58,9 +58,10 @@ class Mitchell(PairGames):
 
     # identify the side of the pair
     def pairID(self, n):
-        if len(self.nameObj['Players']) == self.pairs:
-            return self.nameObj['Players'][n-1]
-        return f"{self.pairSide(n)} {self.pairN(n)}" if n != 0 else self.SITOUT
+        idStr = f"{self.pairSide(n)} {self.pairN(n)}" if n != 0 else self.SITOUT
+        if n!= 0 and len(self.nameObj['Players']) == self.pairs:
+            idStr = f'{str(n)} ({self.nameObj['Players'][n-1]})'
+        return idStr
 
     # assign NS pair number
     def NSPair(self, r, t):
@@ -92,7 +93,7 @@ class Mitchell(PairGames):
         self.setTableTexts()  # PDF only
         self.Travelers()  # PDF only
         self.Journal()  # PDF only
-        self.Pickups()  # PDF only
+        #self.Pickups()  # PDF only
         self.save()
         return
 
@@ -147,10 +148,7 @@ class Mitchell(PairGames):
                 pName = self.pairN(p+1)
                 if pName == self.SITOUT:
                     continue
-                if len(self.nameObj['Players']) == self.pairs:
-                    useNames = [x.strip() for x in self.nameObj['Players'][p].split('+')]
-                else:
-                    useNames = [self.placeHolderName(), self.placeHolderName()]
+                useNames = self.pairNames(p)
                 ws.cell(row, 1).font = self.HeaderFont
                 ws.cell(row, 1).alignment = self.centerAlign
                 ws.cell(row, 1).value = pName
@@ -200,10 +198,7 @@ class Mitchell(PairGames):
             y += h
             self.pdf.set_xy(leftM, y)
             for p in range(start, self.pairs + 1, 2):
-                if len(self.nameObj['Players']) == self.pairs:
-                    useNames = [x.strip() for x in self.nameObj['Players'][p-1].split('+')]
-                else:
-                    useNames = ['', '']
+                useNames = self.pairNames(p-1)
                 self.pdf.cell(widths[0], h, text=f'{self.pairN(p)}', align='C', border=1)
                 self.pdf.cell(widths[1], h, text=useNames[0], align='C', border=1)
                 self.pdf.cell(widths[2], h, text=useNames[1], align='C', border=1)

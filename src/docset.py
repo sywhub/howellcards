@@ -199,6 +199,12 @@ class PairGames(DupBridge):
         return '';
 
 
+    def pairNames(self, i):
+        names = [self.placeHolderName(), self.placeHolderName()]
+        if len(self.nameObj['Players']) == self.pairs:
+            names = [x.strip() for x in self.nameObj['Players'][i].split('+')]
+        return names
+
     # turn pair number to string
     def pairID(self, n):
         return f"{self.pairN(n)}"

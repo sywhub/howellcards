@@ -55,7 +55,7 @@ class Howell(PairGames):
 
     def pairID(self, n):
         idStr = f"{('Pair '+ str(n)) if n != 0 else self.SITOUT}"
-        if len(self.nameObj['Players']) > 0:
+        if n != 0 and len(self.nameObj['Players']) > 0:
             idStr = f'{str(n)} ({self.nameObj['Players'][n-1]})'
         return idStr
 	
@@ -156,9 +156,7 @@ class Howell(PairGames):
         lastRow -= 1  # inclusive
 
         for i in range(self.pairs):
-            names = [self.placeHolderName(), self.placeHolderName()]
-            if len(self.nameObj['Players']) == self.pairs:
-                names = [x.strip() for x in self.nameObj['Players'][i].split('+')]
+            names = self.pairNames(i)
             sh.cell(i+row, 1).value = i+1
             sh.cell(i+row, 1).font = self.HeaderFont
             sh.cell(i+row, 1).alignment = self.centerAlign
@@ -214,9 +212,7 @@ class Howell(PairGames):
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         names = ["", ""]
         for i in range(self.pairs):
-            if len(self.nameObj['Players']) == self.pairs:
-                names = [x.strip() for x in self.nameObj['Players'][i].split('+')]
-
+            names = self.pairNames(i)
             self.pdf.set_xy(leftM, y)
             self.pdf.cell(widths[0], h, text=f'{self.pairN(i+1)}', align='C', border=1)
             self.pdf.cell(widths[1], h, text=names[0], align='C', border=1)
@@ -236,7 +232,7 @@ class Howell(PairGames):
         self.movementTables()
         self.Travelers()
         self.Journal()
-        self.Pickups()
+        #self.Pickups()
         self.save()
 
 def howellFromJson(log, pairs, decks, fake, nameFile, jsonfile):
