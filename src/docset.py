@@ -381,8 +381,6 @@ class PairGames(DupBridge):
         startY = y
         flip = 0
         for pairNum in sorted(pairData.keys()):
-            if self.pairID(pairNum) == self.SITOUT:
-                continue
             if pIdx % nPerPage == 0 and flip == 0:
                 self.pdf.add_page()
                 startY = self.pdf.margin
@@ -451,9 +449,9 @@ class PairGames(DupBridge):
         self.pdf.set_font(self.pdf.sansSerifFont, size=self.pdf.notePt+1)
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         for v in sorted(round, key=lambda x: x[2]):
-            self.pdf.set_xy(leftSide, y)
-            if self.pairID(v[2]) == self.SITOUT:
+            if self.ifSitout(v[1], v[2], v[3]):
                 continue
+            self.pdf.set_xy(leftSide, y)
             self.pdf.cell(tblCols[0], h, text=f'{self.pairN(v[2])}', align='C', border=1)
             for c in range(1,len(hdrs)-1):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
@@ -464,7 +462,7 @@ class PairGames(DupBridge):
 
     # Print out the instructions for each table's movement card
     # (The table in the middle of the page)
-    def Tables(self, nsTexts, ewTexts):
+    def Tables(self, nsTexts, ewTexts, ifMitchell = False):
         tables = {}
         for b,r in self.boardData.items():
             for v in r:
@@ -472,7 +470,12 @@ class PairGames(DupBridge):
                     tables[v[1]] = {}
                 if v[0] not in tables[v[1]]:
                     tables[v[1]][v[0]] = []
-                tables[v[1]][v[0]].append({'NS': v[2], 'EW': v[3], 'Board': b})
+                ns = v[2]
+                ew = v[3]
+                if ifMitchell:
+                    ns = ns // 2 + 1
+                    ew = ew // 2 + 1
+                tables[v[1]][v[0]].append({'NS': ns, 'EW': ew, 'Board': b})
         hdrs = ['Round', 'NS', 'EW', 'Boards']
         tblCols = []
         xMargin = 0.5
@@ -507,8 +510,8 @@ class PairGames(DupBridge):
             for r in sorted(tables[t].keys()):
                 tRound = tables[t][r]
                 self.pdf.cell(tblCols[0], h, text=f'{r+1}', align='C', border=1)
-                self.pdf.cell(tblCols[1], h, text=f'{self.pairN(tRound[0]['NS'])}', align='C', border=1)
-                self.pdf.cell(tblCols[2], h, text=f'{self.pairN(tRound[0]['EW'])}', align='C', border=1)
+                self.pdf.cell(tblCols[1], h, text=f'{tRound[0]['NS']}', align='C', border=1)
+                self.pdf.cell(tblCols[2], h, text=f'{tRound[0]['EW']}', align='C', border=1)
                 bds = ""
                 for b in tRound:
                     bds += f'{b['Board']+1},'
@@ -543,7 +546,7 @@ class PairGames(DupBridge):
 
         nTagsPage = 1 if len(data[1]) > 15 else (4 if len(data[1]) <= 8 else 2)
         for id in sorted(data.keys()):
-            if self.pairID(id) == self.SITOUT:
+            if self.ifSitout(data[id][1], data[id][2], data[id][3]):
                 continue
             if tags % nTagsPage == 0:
                 self.pdf.add_page(orientation='P') # no header/footer

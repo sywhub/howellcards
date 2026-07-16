@@ -40,35 +40,35 @@ class Mitchell(PairGames):
 
     # identify whether the pair is NS or EW
     def pairSide(self, n):
-        return ['NS', 'EW'][n % 2]
+        return ['EW', 'NS'][n % 2]
 
     # translate internal pair number to external
     def pairN(self, n):
-        return n // 2 + (0 if n % 2 == 0 else + 1)
+        return n // 2 + 1
 
     # identify the side of the pair
     def pairID(self, n):
-        idStr = f"{self.pairSide(n)} {self.pairN(n)}" if n != 0 else self.SITOUT
-        if n != 0 and len(self.nameObj['Players']) > 0:
-            idStr = f'{str(n)} ({self.nameObj['Players'][n-1]})'
+        sitout = (self.pairs % 2) != 0 and (n == self.pairs - 1)
+        idStr = f"{self.pairSide(n)} {self.pairN(n)}" if not sitout else self.SITOUT
+        if not sitout and len(self.nameObj['Players']) > 0:
+            idStr += f' ({self.nameObj['Players'][n]})'
         return idStr
 
     # assign NS pair number
     def NSPair(self, r, t):
-        n = (t+1) * 2
-        return n if n <= self.pairs else 0
+        return t * 2 + 1
 
     # assign EW pair number
     def EWPair(self, r, t):
-        x = (self.tables - r) % self.tables + t
+        x = (self.tables - r) + t
         x %= self.tables
-        return x * 2 + 1
+        return x * 2
     
     def boardIdx(self, r, t):
         return ((r + t) % self.tables) * self.decks
 
     def ifSitout(self, t, ns, ew):
-        return ns == 0
+        return (self.pairs % 2) and (ns == self.pairs - 1)
 
     def main(self):
         self.log.debug('Main goes')
@@ -178,7 +178,7 @@ class Mitchell(PairGames):
         self.pdf.set_xy(leftM, y)
         self.pdf.set_font(self.pdf.sansSerifFont, size=(self.pdf.bigPt if self.pairs < 19 else self.pdf.linePt)) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
-        start = 2
+        start = 1
         for s in ['NS', 'EW']:
             self.pdf.set_font(style='BI')
             self.pdf.cell(5, h, text=f'{s} Pairs', align='L')
@@ -186,7 +186,7 @@ class Mitchell(PairGames):
             y += h
             self.pdf.set_xy(leftM, y)
             for p in range(start, self.pairs + 1, 2):
-                useNames = self.pairNames(p-1)
+                useNames = self.pairNames(p)
                 self.pdf.cell(widths[0], h, text=f'{self.pairN(p)}', align='C', border=1)
                 self.pdf.cell(widths[1], h, text=useNames[0], align='C', border=1)
                 self.pdf.cell(widths[2], h, text=useNames[1], align='C', border=1)
@@ -231,7 +231,7 @@ class Mitchell(PairGames):
                     nsText.append(f'Stay Here, Boards to Relay')
                 else:
                     nsText.append(f'Stay Here, Boards to T{t if t > 0 else 4}')
-        self.Tables(nsText, ewText)
+        self.Tables(nsText, ewText, True)
 
     # Square arrangement is not programatic.
     def loadSquare(self):
