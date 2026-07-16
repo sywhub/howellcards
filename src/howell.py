@@ -18,28 +18,19 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, Border, Side
 import logging
 import jsonIO
-import json5
 from maininit import setlog
 from docset import PairGames
 
 class Howell(PairGames):
     def __init__(self, log, toFake, pairs, decks, tourney, nameFile):
-        super().__init__(log)
+        super().__init__(log, pairs)
         self.fake = toFake
         self.pdf = pdf.PDF()
         self.wb = Workbook()
-        self.pairs = pairs
         self.decks = decks
         self.tourneyData = tourney
-        self.nameObj = {'File': f'howell{self.pairs}x{self.decks}{"xF" if self.fake else ""}',
-                    'Tournament': f'Howell Movement for {self.pairs} Pairs, {self.decks} boards round',
-                    'Players': []}
-        if nameFile and os.path.exists(nameFile):
-            try:
-                with open(nameFile, 'r') as f:
-                    self.nameObj = json5.load(f)
-            except:
-                pass
+        self.loadNames(nameFile, {'File': f'howell{self.pairs}x{self.decks}{"xF" if self.fake else ""}',
+                    'Tournament': f'Howell Movement for {self.pairs} Pairs, {self.decks} boards round'})
         self.init()
         return
 

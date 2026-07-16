@@ -21,8 +21,7 @@ import json5
 # Externally, they are number 1 to n for both NS and EW sides
 class Mitchell(PairGames):
     def __init__(self, log, p, b, sq, f, nameFile):
-        super().__init__(log)
-        self.pairs = p
+        super().__init__(log, p)
         self.decks = b
         self.tables = (self.pairs + 1) // 2
         self.oddPairs = self.pairs % 2 == 1
@@ -31,15 +30,8 @@ class Mitchell(PairGames):
         self.pdf = pdf.PDF()
         self.wb = Workbook()
 
-        self.nameObj = {'File': f'mitchell{self.pairs}x{self.decks}{"xF" if self.fake else ""}',
-                    'Tournament': f'Mitchell Movement for {self.pairs} Pairs, {self.decks} boards round',
-                    'Players': []}
-        if nameFile and os.path.exists(nameFile):
-            try:
-                with open(nameFile, 'r') as f:
-                    self.nameObj = json5.load(f)
-            except:
-                pass
+        self.loadNames(nameFile, {'File': f'mitchell{self.pairs}x{self.decks}{"xF" if self.fake else ""}',
+                    'Tournament': f'Mitchell Movement for {self.pairs} Pairs, {self.decks} boards round'})
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
             self.nameObj['Tournament'])
         # initData must be the first one
@@ -52,14 +44,12 @@ class Mitchell(PairGames):
 
     # translate internal pair number to external
     def pairN(self, n):
-        if n == 0:
-            return self.SITOUT
         return n // 2 + (0 if n % 2 == 0 else + 1)
 
     # identify the side of the pair
     def pairID(self, n):
         idStr = f"{self.pairSide(n)} {self.pairN(n)}" if n != 0 else self.SITOUT
-        if n!= 0 and len(self.nameObj['Players']) == self.pairs:
+        if n != 0 and len(self.nameObj['Players']) > 0:
             idStr = f'{str(n)} ({self.nameObj['Players'][n-1]})'
         return idStr
 
@@ -130,9 +120,9 @@ class Mitchell(PairGames):
         ws.title = 'Roster'
 
         row = self.sheetMeta(ws, self.metaData) + 2
-        toN = self.pairs + (1 if self.oddPairs else 0)
-        for s in range(2):
-            ws.cell(row, 1).value =  f'{['NS', 'EW'][s]} Pairs'
+        start = 2
+        for s in ['NS', 'EW']:
+            ws.cell(row, 1).value =  f'{s} Pairs'
             ws.cell(row, 1).font = self.HeaderFont
             ws.cell(row, 1).alignment = self.centerAlign
             ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
@@ -144,17 +134,15 @@ class Mitchell(PairGames):
             ws.cell(row, 5).alignment = self.centerAlign
             row += 1
             avgStart = row  # remember this row
-            for p in range(s, toN, 2):
-                pName = self.pairN(p+1)
-                if pName == self.SITOUT:
-                    continue
-                useNames = self.pairNames(p)
+            for p in range(start, self.pairs + 1, 2):
+                useNames = self.pairNames(p-1)
                 ws.cell(row, 1).font = self.HeaderFont
                 ws.cell(row, 1).alignment = self.centerAlign
-                ws.cell(row, 1).value = pName
+                ws.cell(row, 1).value = self.pairN(p)
                 ws.cell(row, 2).value = useNames[0]
                 ws.cell(row, 3).value = useNames[1]
                 row += 1
+            start -= 1
 
             # draw a line
             for i in range(6):

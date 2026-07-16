@@ -5,13 +5,17 @@
 from openpyxl.styles import Font, Alignment, Border, Side
 from openpyxl.worksheet.errors import IgnoredError
 import random
+import json5
+import os
 from collections import Counter
 
 # Duplicate Bridge
 class DupBridge:
-    def __init__(self, log):
+    def __init__(self, log, p):
         self.log = log
+        self.pairs = p
         self.HeaderFont = Font(bold=True, size=14)
+        self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
         self.centerAlign = Alignment(horizontal='center')
         self.trumps = ('D/C', 'H/S', 'NT')  
         self.thinLine = Side(style='thin', color="000000")
@@ -19,7 +23,6 @@ class DupBridge:
         self.bottomLine = Border(bottom=self.thinLine)
         self.thinTop = Border(top=self.thinLine)
         self.thinLeft = Border(left=self.thinLine)
-        self.HeaderFont = Font(bold=True, size=14)
         self.notice = 'For public domain. No rights reserved. Generated on'
         self.fake = False
 
@@ -176,10 +179,9 @@ class DupBridge:
 # The tournament is arranged by two data structures "boardData" and "roundData"
 # Then they have different scoring/ranking methodologies.
 class PairGames(DupBridge):
-    def __init__(self, log):
+    def __init__(self, log, p):
         # We expect "self.tables" and "self.decks" to be done by the child class
-        super().__init__(log)
-        self.noChangeFont = Font(bold=True, italic=True, color='FF0000')
+        super().__init__(log, p)
         self.SITOUT = "Sit-Out"
         self.roundData = {} # meant to be write-once
         self.boardData = {} # meant to be write-once
@@ -195,13 +197,13 @@ class PairGames(DupBridge):
     def pairID(self, n):
         return f'{self.pairN(n)}'
 
-    def pairSide(self, n):
-        return '';
-
-
+    # i is true pair index (not as pairN, it is zero based)
     def pairNames(self, i):
-        names = [self.placeHolderName(), self.placeHolderName()]
-        if len(self.nameObj['Players']) == self.pairs:
+        if i >= self.pairs:
+            names = [self.SITOUT, self.SITOUT]
+        else:
+            names = [self.placeHolderName(), self.placeHolderName()]
+        if len(self.nameObj['Players']) > 0 and i < len(self.nameObj['Players']):
             names = [x.strip() for x in self.nameObj['Players'][i].split('+')]
         return names
 
@@ -212,6 +214,17 @@ class PairGames(DupBridge):
     # Return a list of actual board numbers (zero-based) from "board set" (zero-based)
     def boardList(self, bIdx):
         return [self.decks*bIdx+x for x in range(self.decks)]
+
+    def loadNames(self, fn, defNames):
+        try:
+            with open(fn, 'r') as f:
+                self.nameObj = json5.load(f)
+            n = len(self.nameObj['Players'])
+            if n > self.pairs:
+                self.nameObj['Players'] = self.nameObj['Players'][:self.pairs]
+        except:
+            self.nameObj = defNames
+            self.nameObj['Players'] = []
 
     # Insert a score to check calculations
     # Probably could have been more sophisticated
