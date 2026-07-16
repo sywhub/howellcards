@@ -185,7 +185,7 @@ class Mitchell(PairGames):
             self.pdf.set_font(style='')
             y += h
             self.pdf.set_xy(leftM, y)
-            for p in range(start, self.pairs + 1, 2):
+            for p in range(start, self.pairs, 2):
                 useNames = self.pairNames(p)
                 self.pdf.cell(widths[0], h, text=f'{self.pairN(p)}', align='C', border=1)
                 self.pdf.cell(widths[1], h, text=useNames[0], align='C', border=1)
