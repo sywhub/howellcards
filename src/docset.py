@@ -387,7 +387,10 @@ class PairGames(DupBridge):
                 y = startY
                 flip = 0
             self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt)
+            saveFont = self.pdf.font_family
+            self.pdf.set_font(self.pdf.chineseFont)
             y = self.pdf.headerRow(xMargin+halfW*flip, y, tblCols, hdrs ,self.pairID(pairNum), "Play Records")
+            self.pdf.set_font(saveFont)
             y += self.pdf.lineHeight(self.pdf.font_size_pt)
             self.pdf.set_font(size=self.pdf.smallPt-1)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -473,7 +476,10 @@ class PairGames(DupBridge):
                 ns = v[2]
                 ew = v[3]
                 if ifMitchell:
-                    ns = ns // 2 + 1
+                    if self.ifSitout(v[1], ns, ew):
+                        ns = self.SITOUT
+                    else:
+                        ns = ns // 2 + 1
                     ew = ew // 2 + 1
                 tables[v[1]][v[0]].append({'NS': ns, 'EW': ew, 'Board': b})
         hdrs = ['Round', 'NS', 'EW', 'Boards']
@@ -491,7 +497,7 @@ class PairGames(DupBridge):
 
         fontSize = self.pdf.rosterPt if len(tables) < 10 else self.pdf.bigPt
         for t in sorted(tables.keys()):
-            if self.ifSitout(t, tables[t][0][0]['NS'], tables[t][0][0]['EW']):
+            if tables[t][0][0]['NS'] == self.SITOUT or tables[t][0][0]['EW'] == self.SITOUT:
                 continue
             self.pdf.add_page()
             self.pdf.pageFooter(self.pairs, self.tables)

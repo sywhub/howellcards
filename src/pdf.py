@@ -24,15 +24,20 @@ class PDF(FPDF):
         # Letter size paper is 8.5 by 11 in
         # Taking a quarter inch off each side as margin
         super().__init__(unit='in', format='letter')
+        self.add_font("ChineseFont", "", '/Users/sinyaw/gitclone/pylib/Noto_Sans_TC/NotoSansTC-VariableFont_wght.ttf', uni=True)
         self.set_margin(PDF.margin)
         self.fixedWidthFont = 'Courier'
         self.sansSerifFont = 'Helvetica'
         self.serifFont = 'Times'
+        self.chineseFont = 'ChineseFont'
 
         # Always a default font
         self.set_font(self.sansSerifFont)
         # add the first page
         self.add_page()
+
+    def isChinese(self, txt):
+        return  len(txt) > 0 and '\u4e00' <= txt[0] <= '\u9fff'
 
     # convert "point" font size to inch
     def pt2in(self, p):

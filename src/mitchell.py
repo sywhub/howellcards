@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # Generate Mitchell movements
-#   A PDF with Roster and Score sheets
-#   An Excel spreadsheet to enter the results and calculate the scores
+# A 4-table Mitchell uses "Square" arrangement, found at MIT web site
+# (But for 4-table tournaments, really should use Howell)
 #
-# A 4-table Mitchell use "Square" arrangement, found at MIT web site
+# Even-numbered-table games have 2 styles: skip-rouind or "relay plus sharing".  We do skip.
+# Four-table games uses MIT "square" movement.  It's not really better than Howell.
 #
 import argparse
 import logging
@@ -13,12 +14,16 @@ from openpyxl.styles import Font
 import pdf
 from docset import PairGames
 import datetime
-import os
-import json5
 
 # Pairs are internally numbered 1,3,5,... for EW pairs and 2,4,6,... for NS
 # Pair 0 is the sit-out phantom pair
 # Externally, they are number 1 to n for both NS and EW sides
+#
+# There are "internal" pair numbers that go uniquely from 0 to n.
+# The external ones are "NS 1 to n" and "ES 1 to m", where there are same pair numbers in NS and EW group.
+# Internal even number pairs map to EW and odd to NS.  So that when there are odd number of pairs, the last EW pair
+# sits at the sit-out table.
+#
 class Mitchell(PairGames):
     def __init__(self, log, p, b, sq, f, nameFile):
         super().__init__(log, p)
@@ -38,27 +43,29 @@ class Mitchell(PairGames):
         self.initData()
         self.meta()
 
-    # identify whether the pair is NS or EW
+    # Internal even number pairs are EW and odd NS
     def pairSide(self, n):
         return ['EW', 'NS'][n % 2]
 
     # translate internal pair number to external
+    # Note NS and EW have same pair numbering
     def pairN(self, n):
         return n // 2 + 1
 
-    # identify the side of the pair
+    # Full external name of a pair
+    # [NS | EW] <pair number> (member 1 + member 2)
     def pairID(self, n):
-        sitout = (self.pairs % 2) != 0 and (n == self.pairs - 1)
+        sitout = (self.pairs % 2) != 0 and (n == self.pairs)
         idStr = f"{self.pairSide(n)} {self.pairN(n)}" if not sitout else self.SITOUT
         if not sitout and len(self.nameObj['Players']) > 0:
             idStr += f' ({self.nameObj['Players'][n]})'
         return idStr
 
-    # assign NS pair number
+    # assign internal pair number by table and round
     def NSPair(self, r, t):
         return t * 2 + 1
 
-    # assign EW pair number
+    # same for EW pairs
     def EWPair(self, r, t):
         x = (self.tables - r) + t
         x %= self.tables
@@ -67,35 +74,18 @@ class Mitchell(PairGames):
     def boardIdx(self, r, t):
         return ((r + t) % self.tables) * self.decks
 
+    # The sit-out (phantom) pair is the last of the NS pairs
     def ifSitout(self, t, ns, ew):
-        return (self.pairs % 2) and (ns == self.pairs - 1)
+        return (self.pairs % 2) and (ns == self.pairs)
 
-    def main(self):
-        self.log.debug('Main goes')
-        self.pdf.instructions(self.log, 'mitchellInstructions.txt')
-        self.roster()
-        self.results()
-        self.roundTab()
-        self.boardTab()
-        self.IMPTable() # static sheet
-        self.ScoreTable()   # static sheet, produced to aid human TD, not used elsewhere.
-        #self.idTags()  # PDF only
-        self.setTableTexts()  # PDF only
-        self.Travelers()  # PDF only
-        self.Journal()  # PDF only
-        #self.Pickups()  # PDF only
-        self.save()
-        return
-
-
-    # Generate "boardData" and "roundData"
+    # Initialize board and round tables for various internal code
     def initData(self):
         self.boardData = {}
         if self.pairs == 8 and self.square:
             self.loadSquare()   # square Mitchell
             self.initRounds()
         elif self.tables % 2 == 0: 
-            self.loadEven() # self.pairs in [11, 12, 15, 16]
+            self.loadEven()
         else:  # standard Mitchell
             for r in range(self.tables): # round
                 for t in range(self.tables): # table
@@ -120,7 +110,7 @@ class Mitchell(PairGames):
         ws.title = 'Roster'
 
         row = self.sheetMeta(ws, self.metaData) + 2
-        start = 2
+        start = 1
         for s in ['NS', 'EW']:
             ws.cell(row, 1).value =  f'{s} Pairs'
             ws.cell(row, 1).font = self.HeaderFont
@@ -134,8 +124,8 @@ class Mitchell(PairGames):
             ws.cell(row, 5).alignment = self.centerAlign
             row += 1
             avgStart = row  # remember this row
-            for p in range(start, self.pairs + 1, 2):
-                useNames = self.pairNames(p-1)
+            for p in range(start, self.pairs, 2):
+                useNames = self.pairNames(p)
                 ws.cell(row, 1).font = self.HeaderFont
                 ws.cell(row, 1).alignment = self.centerAlign
                 ws.cell(row, 1).value = self.pairN(p)
@@ -185,6 +175,8 @@ class Mitchell(PairGames):
             self.pdf.set_font(style='')
             y += h
             self.pdf.set_xy(leftM, y)
+            saveFont = self.pdf.font_family
+            self.pdf.set_font(self.pdf.chineseFont)
             for p in range(start, self.pairs, 2):
                 useNames = self.pairNames(p)
                 self.pdf.cell(widths[0], h, text=f'{self.pairN(p)}', align='C', border=1)
@@ -193,6 +185,8 @@ class Mitchell(PairGames):
                 y += h
                 self.pdf.set_xy(leftM, y)
             start -= 1
+            self.pdf.set_font(saveFont)
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.rosterPt) 
         return
 
     # roster shows meta info first
@@ -260,13 +254,16 @@ class Mitchell(PairGames):
         for t,tbl in self.sqSetup.items():
             for r in tbl:
                 r['Board'] = [r['Board']*self.decks + x for x in range(self.decks)]
-                r['NS'] = r['NS'] * 2
-                r['EW'] = (r['EW'] - 1) * 2 + 1
+                r['NS'] = (r['NS'] - 1) * 2 + 1
+                r['EW'] = (r['EW'] - 1) * 2 
                 for b in r['Board']:
                     if b not in self.boardData:
                         self.boardData[b] = []
                     self.boardData[b].append([r['Round'], t, r['NS'], r['EW']])
 
+    # Even number of tables not 7 or 8 pairs
+    # Basically 11, 12, 15, and 16 pairs
+    # Key point is skipping a round at mid-way
     def loadEven(self):
         self.roundData = {}
         for r in range(self.tables - 1):
@@ -327,6 +324,23 @@ class Mitchell(PairGames):
         self.wb.save(f'{fn}.xlsx')
         self.pdf.output(f'{fn}.pdf')
         print(f'Saved {fn}.{{xlsx,pdf}}')
+
+    def main(self):
+        self.log.debug('Main goes')
+        self.pdf.instructions(self.log, 'mitchellInstructions.txt')
+        self.roster()
+        self.results()
+        self.roundTab()
+        self.boardTab()
+        self.IMPTable() # static sheet
+        self.ScoreTable()   # static sheet, produced to aid human TD, not used elsewhere.
+        #self.idTags()  # PDF only
+        self.setTableTexts()  # PDF only
+        self.Travelers()  # PDF only
+        self.Journal()  # PDF only
+        #self.Pickups()  # PDF only
+        self.save()
+        return
 
 
 if __name__ == '__main__':
