@@ -705,7 +705,7 @@ class PairGames(DupBridge):
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 1)
         row, headers = self.boardSheetHeaders(sh)
-        rGap = self.tables * self.decks    # Number of rows between each round
+        rGap = (self.tables - self.pairs % 2) * self.decks    # Number of rows between each round
         for b in sorted(self.boardData.keys()):
             sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign

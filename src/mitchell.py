@@ -55,7 +55,7 @@ class Mitchell(PairGames):
     # Full external name of a pair
     # [NS | EW] <pair number> (member 1 + member 2)
     def pairID(self, n):
-        sitout = (self.pairs % 2) != 0 and (n == self.pairs)
+        sitout = self.oddPairs != 0 and (n == self.pairs)
         idStr = f"{self.pairSide(n)} {self.pairN(n)}" if not sitout else self.SITOUT
         if not sitout and len(self.nameObj['Players']) > 0:
             idStr += f' ({self.nameObj['Players'][n]})'
@@ -76,7 +76,7 @@ class Mitchell(PairGames):
 
     # The sit-out (phantom) pair is the last of the NS pairs
     def ifSitout(self, t, ns, ew):
-        return (self.pairs % 2) and (ns == self.pairs)
+        return (self.oddPairs) and (ns == self.pairs)
 
     # Initialize board and round tables for various internal code
     def initData(self):
@@ -93,7 +93,10 @@ class Mitchell(PairGames):
                     for bset in range(self.decks):
                         if (b + bset) not in self.boardData:
                             self.boardData[b+bset] = []
-                        self.boardData[b+bset].append([r, t, self.NSPair(r, t), self.EWPair(r, t)])
+                        ns = self.NSPair(r, t)
+                        ew = self.EWPair(r, t)
+                        if not self.ifSitout(t, ns, ew):
+                            self.boardData[b+bset].append([r, t, self.NSPair(r, t), self.EWPair(r, t)])
             self.initRounds()
         self.checkBoardData()
 
@@ -269,14 +272,16 @@ class Mitchell(PairGames):
         for r in range(self.tables - 1):
             self.roundData[r] = {}
             for t in range(self.tables):
-                self.roundData[r][t] = []
                 bIdx = t + r
                 if bIdx >= self.tables:
                     bIdx -= self.tables
                 blist = [self.decks*bIdx+x for x in range(self.decks)]
-                self.roundData[r][t] = {'NS': self.NSPair(r, t), 'EW': self.EWPair(r,t), 'Board': blist}
-                if r >= self.tables // 2:
-                    self.roundData[r][t]['EW'] = self.EWPair(r+1,t)
+                ns = self.NSPair(r, t)
+                ew = self.EWPair(r, t)
+                if not self.ifSitout(t, ns, ew):
+                    self.roundData[r][t] = {'NS': ns, 'EW': ew, 'Board': blist}
+                    if r >= self.tables // 2:
+                        self.roundData[r][t]['EW'] = self.EWPair(r+1,t)
         self.boardData = {}
         for r,tbl in self.roundData.items():
             for t,d in tbl.items():
@@ -291,22 +296,28 @@ class Mitchell(PairGames):
         sh = self.wb['Roster']
         lastRows = 0
         row = len(self.metaData['Info']) + 4 + 1    # Copyright, Title, a Spacer, and score table row, plus sheet is 1-based
-        divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
-        divident *= len(self.boardData[0]) - (1 if self.boardData[len(self.boardData)-1][0][2] != 0 else 2)
 
         for b in self.boardData.values():
             lastRows += len(b)
         lastRows -= 1  # inclusive
-        for s in range(2):
-            toN = self.pairs + (1 if self.oddPairs else 0)
+        # Compute the max MP pts for each pair
+        # Scan boardData, find the board the pair played and count how many times that board was played
+        # Max MP pt is the one less than the number of times the board was played
+        divMap = {x: 0 for x in range(self.pairs)}
+        for v in self.boardData.values():
+            for p in v:
+                divMap[p[2]] += len(v) - 1
+                divMap[p[3]] += len(v) - 1
+        for s in [1, 0]:
+            toN = self.pairs
             for p in range(s, toN, 2):
                 pName = self.pairN(p+1)
                 if pName == self.SITOUT:
                     continue
-                ifRange = f"'By Board'!{self.rc2a1(3, 4+s)}:{self.rc2a1(3+lastRows,4+s)}"
-                impRange = f"'By Board'!{self.rc2a1(3, 13+s)}:{self.rc2a1(3+lastRows,13+s)}"
-                sumRange = f"'By Board'!{self.rc2a1(3, 17+s)}:{self.rc2a1(3+lastRows,17+s)}"
-                sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divident}"
+                ifRange = f"'By Board'!{self.rc2a1(3, 5-s)}:{self.rc2a1(3+lastRows,5-s)}"
+                impRange = f"'By Board'!{self.rc2a1(3, 14-s)}:{self.rc2a1(3+lastRows,14-s)}"
+                sumRange = f"'By Board'!{self.rc2a1(3, 18-s)}:{self.rc2a1(3+lastRows,18-s)}"
+                sh.cell(row,4).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{sumRange})/{divMap[p]}"
                 sh.cell(row,5).value=f"=SUMIF({ifRange},\"=\"&{self.rc2a1(row, 1)},{impRange})"
                 sh.cell(row,4).number_format = "0.00%"
                 sh.cell(row,5).number_format = "#0.0"
