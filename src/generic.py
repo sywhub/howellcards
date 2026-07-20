@@ -13,7 +13,7 @@ from docset import PairGames
 
 class GenericPDF(PairGames):
     def __init__(self):
-        super().__init__(None)
+        super().__init__(None, 0)
         self.pdf = pdf.PDF()
         self.notice = 'For public domain. No rights reserved. Generated on'
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',' ')
