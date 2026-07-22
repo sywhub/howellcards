@@ -303,7 +303,7 @@ class PairGames(DupBridge):
         hdrs = ['NS Score', 'Made', 'Down', 'NS Contract', 'By', 'Board', 'EW Contract', 'By', 'Made', 'Down', 'EW Socre']
         self.pdf.set_font(self.pdf.sansSerifFont, style='B', size=self.pdf.notePt)
         self.pdf.setHeaders(xMargin, hdrs, tblCols)
-        xMargin = (self.pdf.w - sum(tblCols)) / 2
+        xMargin = (self.pdf.w - sum(tblCols)) / 3
         bIdx = 0
         for t in sorted(tables.keys()):
             # the sit-out table
@@ -368,31 +368,31 @@ class PairGames(DupBridge):
     def JournalWithData(self, pairData):
         tblCols = []
         hdrs = ['Board', 'vs.', 'Bid'*2, 'By', 'M', 'M', 'NS', 'EW']
-        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt)
+        self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
         self.pdf.setHeaders(0, hdrs, tblCols)
-        xMargin = (self.pdf.w - 2*sum(tblCols)) / 4
+        xMargin = (self.pdf.h - 2*sum(tblCols)) / 3
         hdrs[hdrs.index('Bid'*2)] = 'Bid'
         hdrs[hdrs.index('M')] = 'Made'
         hdrs[hdrs.index('M')] = 'Down'
-        nPerPage = 2
+        nPerPage = 1
         pIdx = 0
-        halfW = self.pdf.w / 2
+        halfW = self.pdf.h / 2
         y = self.pdf.margin
         startY = y
         flip = 0
         for pairNum in sorted(pairData.keys()):
             if pIdx % nPerPage == 0 and flip == 0:
-                self.pdf.add_page()
+                self.pdf.add_page('L')
                 startY = self.pdf.margin
                 y = startY
                 flip = 0
-            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.notePt)
+            self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.linePt)
             saveFont = self.pdf.font_family
             self.pdf.set_font(self.pdf.chineseFont)
             y = self.pdf.headerRow(xMargin+halfW*flip, y, tblCols, hdrs ,self.pairID(pairNum), "Play Records")
             self.pdf.set_font(saveFont)
             y += self.pdf.lineHeight(self.pdf.font_size_pt)
-            self.pdf.set_font(size=self.pdf.smallPt-1)
+            self.pdf.set_font(size=self.pdf.notePt-1)
             h = self.pdf.lineHeight(self.pdf.font_size_pt)
             self.pdf.set_xy(xMargin+halfW*flip, y)
             for v in sorted(pairData[pairNum], key=lambda x: x[0]):
