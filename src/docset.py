@@ -374,14 +374,13 @@ class PairGames(DupBridge):
         hdrs[hdrs.index('Bid'*2)] = 'Bid'
         hdrs[hdrs.index('M')] = 'Made'
         hdrs[hdrs.index('M')] = 'Down'
-        nPerPage = 1
         pIdx = 0
         halfW = self.pdf.h / 2
         y = self.pdf.margin
         startY = y
         flip = 0
         for pairNum in sorted(pairData.keys()):
-            if pIdx % nPerPage == 0 and flip == 0:
+            if flip == 0:
                 self.pdf.add_page('L')
                 startY = self.pdf.margin
                 y = startY
@@ -403,10 +402,8 @@ class PairGames(DupBridge):
                     self.pdf.cell(tblCols[c], h, text='', align='C', border=1)
                 y += h
                 self.pdf.set_xy(xMargin+halfW*flip, y)
+            self.pdf.twoFooters(self.pdf.eph, flip)
             flip = 1 - flip
-            if flip == 0:
-                pIdx += 1
-                startY = self.pdf.sectionDivider(nPerPage, pIdx, self.pdf.margin)
             y = startY
         return
 

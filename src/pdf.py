@@ -74,6 +74,19 @@ class PDF(FPDF):
     def pageFooter(self, pairs, tbls):
         self.secFooter(self.eph)
 
+    def twoFooters(self, pageBottom, side):
+        if len(self.footerText) <= 0:
+            return
+        self.set_font(size=PDF.tinyPt)
+        h = self.lineHeight(self.font_size_pt)
+        w = self.get_string_width(self.footerText)
+        gap = (self.w - 2 * w) / 4
+        x = gap + (2 * gap + w ) * side
+        y = pageBottom - h
+        self.set_xy(x, y)
+        self.cell(text=self.footerText)
+
+
     def secFooter(self, pageBottom):
         if len(self.footerText) <= 0:
             return
@@ -285,7 +298,7 @@ class PDF(FPDF):
         h = self.lineHeight(self.font_size_pt)
         secIdx = bIdx % nSection
         if secIdx == 0:
-            self.secFooter(self.eph)
+            #self.secFooter(self.eph)
             return self.get_y() + h
         secY = (self.h - 0.5) / nSection
         y = secY * (secIdx % nSection) + 0.5 - h
@@ -293,5 +306,5 @@ class PDF(FPDF):
         self.set_dash_pattern(dash=0.1, gap=0.1)
         self.line(x1=leftMargin, y1=y, x2=self.w - leftMargin, y2=y)
         self.set_dash_pattern()
-        self.secFooter(y)
+        #self.secFooter(y)
         return y + h
