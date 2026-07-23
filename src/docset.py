@@ -426,12 +426,14 @@ class PairGames(DupBridge):
         bIdx = 0
         flip = 0
         startY = self.pdf.margin
+        h = self.pdf.lineHeight(self.pdf.font_size_pt)
         for b in sorted(data.keys()):
             if bIdx % nPerPage == 0 and flip == 0:
                 self.pdf.add_page()
                 startY = self.pdf.margin;
                 y = startY
             y = self.printTraveler(xMargin+halfW*flip, tblCols, hdrs, b, data[b], y)
+            self.pdf.twoFooters(y+h, flip)
             flip = 1 - flip
             if flip == 0:
                 bIdx += 1

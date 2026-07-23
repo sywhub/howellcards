@@ -65,14 +65,14 @@ class Mitchell(PairGames):
     def NSPair(self, r, t):
         return t * 2 + 1
 
-    # same for EW pairs
+    # EW pairs internal numbers are even, zero-based.
     def EWPair(self, r, t):
-        x = (self.tables - r) + t
-        x %= self.tables
-        return x * 2
+        x = (r + t) % self.tables * 2
+        return x
     
+    # board base number for each round/table
     def boardIdx(self, r, t):
-        return ((r + t) % self.tables) * self.decks
+        return ((t - r + self.tables) % self.tables) * self.decks
 
     # The sit-out (phantom) pair is the last of the NS pairs
     def ifSitout(self, t, ns, ew):
@@ -223,11 +223,8 @@ class Mitchell(PairGames):
             nsText = []
             ewText = []
             for t in range(self.tables):
-                ewText.append(f'Move to Table {t+2 if t < 3 else 1} EW')
-                if self.tables % 2 == 0 and t == self.tables // 2:
-                    nsText.append(f'Stay Here, Boards to Relay')
-                else:
-                    nsText.append(f'Stay Here, Boards to T{t if t > 0 else 4}')
+                ewText.append(f'Move to Table {(t+self.tables-1) % self.tables + 1} EW')
+                nsText.append(f'Stay Here, Boards to T{t + 2 if t < self.tables else 1}')
         self.Tables(nsText, ewText, True)
 
     # Square arrangement is not programatic.
@@ -272,10 +269,8 @@ class Mitchell(PairGames):
         for r in range(self.tables - 1):
             self.roundData[r] = {}
             for t in range(self.tables):
-                bIdx = t + r
-                if bIdx >= self.tables:
-                    bIdx -= self.tables
-                blist = [self.decks*bIdx+x for x in range(self.decks)]
+                bIdx = self.boardIdx(r , t)
+                blist = [bIdx+x for x in range(self.decks)]
                 ns = self.NSPair(r, t)
                 ew = self.EWPair(r, t)
                 if not self.ifSitout(t, ns, ew):
