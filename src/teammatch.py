@@ -53,21 +53,14 @@ class TeamMatch(PairGames):
 
     # Setup boardData and roundData for parent class methods
     def initData(self):
-        setupData = {
-            0: {0: {'NS': 1, 'EW': 4, 'Board': 0}, 1: {'NS': 3, 'EW': 2, 'Board': 1}},
-            1: {0: {'NS': 1, 'EW': 4, 'Board': 1}, 1: {'NS': 3, 'EW': 2, 'Board': 0}},
-            2: {0: {'NS': 1, 'EW': 3, 'Board': 2}, 1: {'NS': 4, 'EW': 2, 'Board': 3}},
-            3: {0: {'NS': 1, 'EW': 3, 'Board': 3}, 1: {'NS': 4, 'EW': 2, 'Board': 2}}}
+        self.roundData = {
+            0: {0: {'NS': 1, 'EW': 4, 'Board': self.boardList(0)}, 1: {'NS': 3, 'EW': 2, 'Board': self.boardList(1)}},
+            1: {0: {'NS': 1, 'EW': 4, 'Board': self.boardList(1)}, 1: {'NS': 3, 'EW': 2, 'Board': self.boardList(0)}},
+            2: {0: {'NS': 1, 'EW': 3, 'Board': self.boardList(2)}, 1: {'NS': 4, 'EW': 2, 'Board': self.boardList(3)}},
+            3: {0: {'NS': 1, 'EW': 3, 'Board': self.boardList(3)}, 1: {'NS': 4, 'EW': 2, 'Board': self.boardList(2)}}}
 
-        for r in range(4):
-            self.roundData[r] = {}
-            for t,tbl in setupData[r].items():
-                self.roundData[r][t] = {}
-                for k,v in tbl.items():
-                    self.roundData[r][t][k] = v
-                self.roundData[r][t]['Board'] = self.boardList(self.roundData[r][t]['Board'])
         for r,t in self.roundData.items():
-            for tbl,tData in self.roundData[r].items():
+            for tbl,tData in t.items():
                 for b in tData['Board']:
                     if b not in self.boardData:
                         self.boardData[b] = []
@@ -92,11 +85,12 @@ class TeamMatch(PairGames):
             ws.merge_cells(f'{ws.cell(row,2).coordinate}:{ws.cell(row,3).coordinate}')
             row += 1
             for p in range(2):
+                names = self.pairNames(t * 2 + p)
                 ws.cell(row, 1).font = self.HeaderFont
                 ws.cell(row, 1).alignment = self.centerAlign
                 ws.cell(row, 1).value = 2 * t + p + 1
-                ws.cell(row, 2).value = self.placeHolderName()
-                ws.cell(row, 3).value = self.placeHolderName()
+                ws.cell(row, 2).value = names[0]
+                ws.cell(row, 3).value = names[1]
                 row += 1
             for c in range(4):
                 ws.cell(row-1,c+1).border = self.bottomLine
@@ -130,6 +124,30 @@ class TeamMatch(PairGames):
                 self.pdf.cell(w=nameW, h=ht, text=names[1], align='C', border=1)
                 self.pdf.ln()
             self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt))
+        self.pdf.set_font_size(self.pdf.headerPt)
+        ht = self.pdf.lineHeight(self.pdf.font_size_pt)
+        xMargin = self.pdf.margin
+        hdrs = ['Round', 'NS', 'EW', 'Boards']
+        tblCols=[]
+        self.pdf.setHeaders(xMargin, hdrs, tblCols)
+        tblCols[3] = self.pdf.get_string_width('8'*self.decks*2+','*(self.decks-1))+0.25
+        xMargin = (self.pdf.w - sum(tblCols)) / 2
+        for t in range(2):
+            self.pdf.set_x(xMargin)
+            self.pdf.cell(h=ht, text=f'Table {t+1}')
+            self.pdf.headerRow(xMargin, self.pdf.get_y(), tblCols, hdrs)
+            self.pdf.set_font(style='')
+            self.pdf.ln()
+            for r in sorted(self.roundData.keys()):
+                pos = self.roundData[r][t]
+                self.pdf.set_x(xMargin)
+                self.pdf.cell(w=tblCols[0], h=ht, text=f'{r+1}', align='C', border=1)
+                self.pdf.cell(w=tblCols[1], h=ht, text=f'{pos['NS']}', align='C', border=1)
+                self.pdf.cell(w=tblCols[2], h=ht, text=f'{pos['EW']}', align='C', border=1)
+                bds = ','.join([str(x+1) for x in pos['Board']])
+                self.pdf.cell(w=tblCols[3], h=ht, text=bds, align='C', border=1)
+                self.pdf.ln()
+            self.pdf.ln()
 
     def boardSheetHeaders(self, sh, nTbl):
         # first row setup some spanning column headers
