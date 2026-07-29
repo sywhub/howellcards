@@ -21,20 +21,20 @@ from docset import PairGames
 from maininit import setlog
 
 class TeamMatch(PairGames):
-    def __init__(self, log, nameFile):
+    def __init__(self, log):
         super().__init__(log, 4)
         self.pdf = pdf.PDF()
         self.wb = Workbook()
-        self.decks = 4
+
+    # record metadata
+    def setup(self, boards, nameFile, fake):
+        self.decks = boards
+        self.fake = fake
         self.loadNames(nameFile, {'File': f'teammatchx{self.decks}{"xF" if self.fake else ""}',
                     'Tournament': f'Team Match, {self.decks} boards round'})
         self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',
             self.nameObj['Tournament'])
 
-    # record metadata
-    def setup(self, boards, fake):
-        self.decks = boards
-        self.fake = fake
         self.initData()
         try:
             self.checkBoardData()
@@ -46,15 +46,18 @@ class TeamMatch(PairGames):
         return n
 
     def pairID(self, n):
-        return f"{n}"
+        idStr = f'{self.pairN(n)}'
+        if len(self.nameObj['Players']) > 0:
+            idStr += f' ({self.nameObj['Players'][n-1]})'
+        return idStr
 
     # Setup boardData and roundData for parent class methods
     def initData(self):
         setupData = {
-            0: {0: {'NS': 1, 'EW': 3, 'Board': 0}, 1: {'NS': 4, 'EW': 2, 'Board': 1}},
-            1: {0: {'NS': 1, 'EW': 3, 'Board': 1}, 1: {'NS': 4, 'EW': 2, 'Board': 0}},
-            2: {0: {'NS': 1, 'EW': 4, 'Board': 2}, 1: {'NS': 3, 'EW': 2, 'Board': 3}},
-            3: {0: {'NS': 1, 'EW': 4, 'Board': 3}, 1: {'NS': 3, 'EW': 2, 'Board': 2}}}
+            0: {0: {'NS': 1, 'EW': 4, 'Board': 0}, 1: {'NS': 3, 'EW': 2, 'Board': 1}},
+            1: {0: {'NS': 1, 'EW': 4, 'Board': 1}, 1: {'NS': 3, 'EW': 2, 'Board': 0}},
+            2: {0: {'NS': 1, 'EW': 3, 'Board': 2}, 1: {'NS': 4, 'EW': 2, 'Board': 3}},
+            3: {0: {'NS': 1, 'EW': 3, 'Board': 3}, 1: {'NS': 4, 'EW': 2, 'Board': 2}}}
 
         for r in range(4):
             self.roundData[r] = {}
@@ -81,79 +84,58 @@ class TeamMatch(PairGames):
         ws.column_dimensions['B'].width = 30
         ws.column_dimensions['C'].width = 30
         row += 2
-        ws.cell(row, 1).value =  'Pairs'
-        ws.cell(row, 1).font = self.HeaderFont
-        ws.cell(row, 1).alignment = self.centerAlign
-        ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
-        ws.cell(row, 4).value = 'IMP'
-        ws.cell(row, 4).font = self.HeaderFont
-        ws.cell(row, 4).alignment = self.centerAlign
-        row += 1
-        nBoards = len(self.boardData)
-        for pair in range(4):
-            ws.cell(row, 1).font = self.HeaderFont
-            ws.cell(row, 1).alignment = self.centerAlign
-            ws.cell(row, 1).value = pair+1
-            ws.cell(row, 2).value = self.placeHolderName()
-            ws.cell(row, 3).value = self.placeHolderName()
-            sum = f"=SUMIF('By Board'!{self.rc2a1(3,4)}:{self.rc2a1(3+nBoards,4)},\"=\"&{self.rc2a1(row,1)},'By Board'!{self.rc2a1(3,12)}:{self.rc2a1(3+nBoards,12)})"
-            sum += f"+SUMIF('By Board'!{self.rc2a1(3,5)}:{self.rc2a1(3+nBoards,5)},\"=\"&{self.rc2a1(row,1)},'By Board'!{self.rc2a1(3,13)}:{self.rc2a1(3+nBoards,13)})"
-            ws.cell(row, 4).value = sum
+        nSum = len(self.boardData) * len(self.boardData[0]) - 1
+        for t in range(2):
+            ws.cell(row, 2).font = self.HeaderFont
+            ws.cell(row, 2).alignment = self.centerAlign
+            ws.cell(row, 2).value = f'Team {t+1}'
+            ws.merge_cells(f'{ws.cell(row,2).coordinate}:{ws.cell(row,3).coordinate}')
             row += 1
-        for c in range(4):
-            ws.cell(row-1,c+1).border = self.bottomLine
-        ws.cell(row,3).value='Sum'
-        ws.cell(row,4).value=f'=SUM({self.rc2a1(3,4)}:{self.rc2a1(7,4)})'
-        ws.cell(row,3).font = self.noChangeFont
-        ws.cell(row,4).font = self.noChangeFont
-        
+            for p in range(2):
+                ws.cell(row, 1).font = self.HeaderFont
+                ws.cell(row, 1).alignment = self.centerAlign
+                ws.cell(row, 1).value = 2 * t + p + 1
+                ws.cell(row, 2).value = self.placeHolderName()
+                ws.cell(row, 3).value = self.placeHolderName()
+                row += 1
+            for c in range(4):
+                ws.cell(row-1,c+1).border = self.bottomLine
+            ws.cell(row, 3).font = self.HeaderFont
+            ws.cell(row, 3).alignment = self.centerAlign
+            ws.cell(row, 3).value = 'IMP Sum'
+            sum = f"=SUMIF('By Board'!{self.rc2a1(3,4)}:{self.rc2a1(3+nSum,4)},\"=\"&{self.rc2a1(row-2,1)},'By Board'!{self.rc2a1(3,12)}:{self.rc2a1(3+nSum,12)})"
+            sum += f"+SUMIF('By Board'!{self.rc2a1(3,4)}:{self.rc2a1(3+nSum,4)},\"=\"&{self.rc2a1(row-1,1)},'By Board'!{self.rc2a1(3,12)}:{self.rc2a1(3+nSum,12)})"
+            ws.cell(row, 4).value = sum
+            ws.cell(row, 4).font = self.noChangeFont
+            row += 2
+            
     # simple sign-up sheet, PDF
     def rosterPDF(self):
-        self.pdf.add_page()
         self.pdf.headerFooter()
-        self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
         self.pdf.set_y(self.pdf.margin + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
-        self.pdf.cell(w=self.pdf.epw, text='Pair Signup', align='C')
-        self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
-        
-        pw = self.pdf.get_string_width('Pair'+'8'*2) + 0.25
-        nameW = (self.pdf.w - pw - 4 * self.pdf.margin) / 2
-        self.pdf.set_font(style='', family=self.pdf.sansSerifFont)
-        ht = self.pdf.lineHeight(self.pdf.font_size_pt)
+        for t in range(2):
+            self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
+            self.pdf.cell(w=self.pdf.epw, text=f'Team {t+1}', align='C')
+            self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt))
 
-        for p in range(4):
-            self.pdf.set_x(self.pdf.margin*2)
-            self.pdf.cell(w=pw, h=ht, text=f'Pair {p+1}', align='C', border=1)
-            self.pdf.cell(w=nameW, h=ht, text='', border=1)
-            self.pdf.cell(w=nameW, h=ht, text='', border=1)
-            self.pdf.ln()
-
-        self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
-        self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
-        ht = self.pdf.lineHeight(self.pdf.font_size_pt)
-        pw = self.pdf.get_string_width('Match'+'8') + 0.25
-        nameW = (self.pdf.w - pw - 4 * self.pdf.margin) / 2
-        self.pdf.cell(w=pw, h=ht, text="Match", border=1, align='C')
-        self.pdf.cell(w=nameW, h=ht, text=f"Team 1", border=1, align='C')
-        self.pdf.cell(w=nameW, h=ht, text=f"Team 2", border=1, align='C')
-        self.pdf.ln()
-
-        self.pdf.set_font(style='', family=self.pdf.sansSerifFont)
-        ht = self.pdf.lineHeight(self.pdf.font_size_pt)
-        self.pdf.cell(w=pw, h=ht, text="1", border=1, align='C')
-        self.pdf.cell(w=nameW, h=ht,
-                    text=f"Pairs {self.roundData[0][0]['NS']} & {self.roundData[0][1]['EW']}",
-                        border=1, align='C')
-        self.pdf.cell(w=nameW, h=ht,
-                    text=f"Pairs {self.roundData[0][0]['EW']} & {self.roundData[0][1]['NS']}",
-                        border=1, align='C')
-        self.pdf.ln()
+            self.pdf.set_font(style='', family=self.pdf.sansSerifFont)
+            pw = self.pdf.get_string_width('Pair'+'8'*4) + 0.25
+            nameW = (self.pdf.w - pw - 4 * self.pdf.margin) / 2
+            ht = self.pdf.lineHeight(self.pdf.font_size_pt)
+            for p in range(2):
+                names = self.pairNames(t * 2 + p)
+                self.pdf.set_x(self.pdf.margin*2)
+                self.pdf.cell(w=pw, h=ht, text=f'Pair {t * 2 + p+1}', align='C', border=1)
+                self.pdf.cell(w=nameW, h=ht, text=names[0], align='C', border=1)
+                self.pdf.cell(w=nameW, h=ht, text=names[1], align='C', border=1)
+                self.pdf.ln()
+            self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt))
 
     def boardSheetHeaders(self, sh, nTbl):
         # first row setup some spanning column headers
-        mergeHdrs = [['Score', 2], ['IMP', 2], ['Net', 2]]
+        mergeHdrs = [['Score', 2], ['', 1], ['', 1], ['Net', 2]]
 
-        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result'] + ['NS', 'EW'] * 3
+        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', 'IMP', 'VP', 'NS', 'EW']
         cStart = headers.index('Result') + 2
         for h in mergeHdrs:
             sh.cell(1, cStart).value = h[0]
@@ -166,15 +148,26 @@ class TeamMatch(PairGames):
         
     # Table of boards played, no PDF equivalent
     # Team matches are always IMP and 2 tables.  It always uses traveler.
+    # VP Formula by WBF
+    #        VP(Winner) = 10+10*((1-Tau^(3M/B))/(1-Tau^3)) with a maximum of 20
+    #        VP(loser) = 20 - VP(winner)
+    #        Tau = (5^.5 - 1)/2 which is the "golden mean" and approximately 0.618...
+    #        M is the margin
+    #        B = 15*(number of boards^.5)
     def Boards(self):
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 1)
         row, headers = self.boardSheetHeaders(sh, 2)
+
+        tau = (5**0.5 - 1)/2
+        tau3 = 1 - tau**3
+        vpb = 15 * len(self.boardData)**0.6
+
         for b in sorted(self.boardData.keys()):
             sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign
             cursorRow = 0
-            for r in self.boardData[b]: # (round, table, NS, EW)
+            for r in sorted(self.boardData[b], key=lambda x: x[2]): # (round, table, NS, EW)
                 sh.cell(row, 2).value = r[0]+1  # round
                 sh.cell(row, 3).value = r[1]+1  # table
                 sh.cell(row, 4).value = r[2]    # NS
@@ -187,6 +180,11 @@ class TeamMatch(PairGames):
                 nIdx = cIdx + 3
                 self.computeNet(sh, row, cIdx-1, nIdx)
                 self.computeIMP(sh, cIdx, 2, row, cursorRow, nIdx, -1)  # put *here*
+                vpWin = f"10+10*(1-{tau}^(3*{self.rc2a1(row,cIdx-1)})/{vpb})/{tau3}"
+                sh.cell(row, nIdx+2).value = f'=IF({self.rc2a1(row, cIdx+1)}>=0,{vpWin},0)'
+                sh.cell(row, nIdx+3).value = tau
+                sh.cell(row, nIdx+4).value = vpb
+                sh.cell(row, cIdx+2).value = f'=IF({self.rc2a1(row,nIdx+2)}>0,IF({self.rc2a1(row,nIdx+2)}>=20,20,{self.rc2a1(row,nIdx+2)}),0)'
                 row += 1
                 cursorRow += 1
             if self.fake:
@@ -223,7 +221,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', type=str, default='INFO', help='Debug level, INFO, DEBUG, ERROR')
-    parser.add_argument('-b', '--boards', type=int, choices=range(1,5), default=4, help='Number of boards per round')
+    parser.add_argument('-b', '--boards', type=int, choices=range(1,9), default=4, help='Number of boards per round')
     parser.add_argument('-n', '--names', type=str, default="", help='Names in the tournament')
     parser.add_argument('-f', '--fake', action='store_true', help='Fake scores to test the spreadsheet')
     args = parser.parse_args()
@@ -231,7 +229,7 @@ if __name__ == '__main__':
         if args.debug.upper() == l[0]:
             log.setLevel(l[1])
             break
-    team = TeamMatch(log, args.names)
+    team = TeamMatch(log)
     # A match has n rounds, each round has m boards, divided into two halves, each half of the boards
-    team.setup(boards=args.boards, fake=args.fake)
+    team.setup(boards=args.boards, nameFile=args.names, fake=args.fake)
     team.match()
