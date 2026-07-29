@@ -133,9 +133,9 @@ class TeamMatch(PairGames):
 
     def boardSheetHeaders(self, sh, nTbl):
         # first row setup some spanning column headers
-        mergeHdrs = [['Score', 2], ['', 1], ['', 1], ['Net', 2]]
+        mergeHdrs = [['Score', 2], ['', 1], ['Net', 2]]
 
-        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', 'IMP', 'VP', 'NS', 'EW']
+        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', 'IMP', 'NS', 'EW']
         cStart = headers.index('Result') + 2
         for h in mergeHdrs:
             sh.cell(1, cStart).value = h[0]
@@ -148,21 +148,10 @@ class TeamMatch(PairGames):
         
     # Table of boards played, no PDF equivalent
     # Team matches are always IMP and 2 tables.  It always uses traveler.
-    # VP Formula by WBF
-    #        VP(Winner) = 10+10*((1-Tau^(3M/B))/(1-Tau^3)) with a maximum of 20
-    #        VP(loser) = 20 - VP(winner)
-    #        Tau = (5^.5 - 1)/2 which is the "golden mean" and approximately 0.618...
-    #        M is the margin
-    #        B = 15*(number of boards^.5)
     def Boards(self):
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 1)
         row, headers = self.boardSheetHeaders(sh, 2)
-
-        tau = (5**0.5 - 1)/2
-        tau3 = 1 - tau**3
-        vpb = 15 * len(self.boardData)**0.6
-
         for b in sorted(self.boardData.keys()):
             sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign
@@ -177,12 +166,9 @@ class TeamMatch(PairGames):
                     sh.cell(row, i).alignment = self.centerAlign
 
                 cIdx = headers.index('Result')+3
-                nIdx = cIdx + 3
-                self.computeNet(sh, row, cIdx-1, nIdx)
+                nIdx = cIdx + 2
                 self.computeIMP(sh, cIdx, 2, row, cursorRow, nIdx, -1)  # put *here*
-                vpWin = f"10+10*((1-{tau}^(3*{self.rc2a1(row,cIdx-1)})/{vpb})/{tau3})"
-                sh.cell(row, nIdx+2).value = f'=IF({self.rc2a1(row, cIdx+1)}>=0,{vpWin},0)'
-                sh.cell(row, cIdx+2).value = f'=IF({self.rc2a1(row,nIdx+2)}>0,IF({self.rc2a1(row,nIdx+2)}>=20,20,{self.rc2a1(row,nIdx+2)}),0)'
+                self.computeNet(sh, row, cIdx-1, nIdx)
                 row += 1
                 cursorRow += 1
             if self.fake:
@@ -191,6 +177,15 @@ class TeamMatch(PairGames):
             for c in range(nIdx+1):
                 sh.cell(row-1,c+1).border = self.bottomLine
         
+    def VPTable(self):
+        sh = self.wb['IMP Table']
+        sh.cell(1, 4).value = 'VP'
+        tau = (5**0.5 - 1)/2
+        tau3 = 1 - tau**3
+        vpb = 15 * len(self.boardData)**0.6
+        for row in range(sh.max_row-1):
+            sh.cell(row+2, 4).value = f"=10+10*(1-{tau}^(3*{self.rc2a1(row+2,3)}/{vpb}))/{tau3}"
+
     # Output into filesystem
     def save(self):
         import os
@@ -208,6 +203,7 @@ class TeamMatch(PairGames):
         self.Boards()
         self.IMPTable()
         self.ScoreTable()
+        self.VPTable()
         #self.idTags()
         #self.Travelers()  # PDF only
         self.Journal()  # pdf only

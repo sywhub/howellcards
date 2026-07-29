@@ -9,3 +9,4 @@ do
 done
 ./howell.py 
 ./generic.py
+./teammatch.py
