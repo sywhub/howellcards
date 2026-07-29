@@ -180,10 +180,8 @@ class TeamMatch(PairGames):
                 nIdx = cIdx + 3
                 self.computeNet(sh, row, cIdx-1, nIdx)
                 self.computeIMP(sh, cIdx, 2, row, cursorRow, nIdx, -1)  # put *here*
-                vpWin = f"10+10*(1-{tau}^(3*{self.rc2a1(row,cIdx-1)})/{vpb})/{tau3}"
+                vpWin = f"10+10*((1-{tau}^(3*{self.rc2a1(row,cIdx-1)})/{vpb})/{tau3})"
                 sh.cell(row, nIdx+2).value = f'=IF({self.rc2a1(row, cIdx+1)}>=0,{vpWin},0)'
-                sh.cell(row, nIdx+3).value = tau
-                sh.cell(row, nIdx+4).value = vpb
                 sh.cell(row, cIdx+2).value = f'=IF({self.rc2a1(row,nIdx+2)}>0,IF({self.rc2a1(row,nIdx+2)}>=20,20,{self.rc2a1(row,nIdx+2)}),0)'
                 row += 1
                 cursorRow += 1
