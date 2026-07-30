@@ -17,6 +17,7 @@ import logging
 import pdf
 import datetime
 from openpyxl import Workbook
+from openpyxl.styles import Border
 from docset import PairGames
 from maininit import setlog
 
@@ -72,12 +73,13 @@ class TeamMatch(PairGames):
         ws = self.wb.active # the first tab
         ws.title = 'Roster'
         metaData = {'Title': self.nameObj['Tournament'],
-                    'Info': [["Rounds", len(self.roundData)], ["Boards per Round", self.decks]]}
+                    'Info': [["Matches", len(self.roundData) // 2], ["Boards per Match", self.decks*2]]}
         row = self.sheetMeta(ws, metaData)
         ws.column_dimensions['B'].width = 30
         ws.column_dimensions['C'].width = 30
         row += 2
-        nSum = len(self.boardData) * len(self.boardData[0]) - 1
+        nSum = len(self.boardData) * len(self.boardData[0])
+        tRows = []
         for t in range(2):
             ws.cell(row, 2).font = self.HeaderFont
             ws.cell(row, 2).alignment = self.centerAlign
@@ -91,17 +93,41 @@ class TeamMatch(PairGames):
                 ws.cell(row, 1).value = 2 * t + p + 1
                 ws.cell(row, 2).value = names[0]
                 ws.cell(row, 3).value = names[1]
+                tRows.append(row)
                 row += 1
-            for c in range(4):
+            for c in range(3):
                 ws.cell(row-1,c+1).border = self.bottomLine
-            ws.cell(row, 3).font = self.HeaderFont
-            ws.cell(row, 3).alignment = self.centerAlign
-            ws.cell(row, 3).value = 'IMP Sum'
-            sum = f"=SUMIF('By Board'!{self.rc2a1(3,4)}:{self.rc2a1(3+nSum,4)},\"=\"&{self.rc2a1(row-2,1)},'By Board'!{self.rc2a1(3,12)}:{self.rc2a1(3+nSum,12)})"
-            sum += f"+SUMIF('By Board'!{self.rc2a1(3,4)}:{self.rc2a1(3+nSum,4)},\"=\"&{self.rc2a1(row-1,1)},'By Board'!{self.rc2a1(3,12)}:{self.rc2a1(3+nSum,12)})"
-            ws.cell(row, 4).value = sum
-            ws.cell(row, 4).font = self.noChangeFont
             row += 2
+        ws.cell(row, 1).font = self.HeaderFont
+        ws.cell(row, 1).alignment = self.centerAlign
+        ws.cell(row, 1).value = 'IMP Summary'
+        ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
+        row += 1
+        i = 1
+        for h in ['Match', 'Team 1', 'Team 2']:
+            ws.cell(row, i).font = self.HeaderFont
+            ws.cell(row, i).alignment = self.centerAlign
+            ws.cell(row, i).value = h
+            i += 1
+        row += 1
+        nSum //= 2
+        nBoards = len(self.boardData) // 2
+        rStart = 3
+        for m in range(2):
+            ws.cell(row, 1).value = m+1
+            for t in range(2):
+                sum =  f"=SUMIF('By Board'!{self.rc2a1(rStart,4)}:{self.rc2a1(rStart+nSum-1,4)},\"=\"&{self.rc2a1(tRows[2*t],1)},'By Board'!{self.rc2a1(rStart,13)}:{self.rc2a1(rStart+nSum-1,13)})"
+                sum += f"+SUMIF('By Board'!{self.rc2a1(rStart,4)}:{self.rc2a1(rStart+nSum-1,4)},\"=\"&{self.rc2a1(tRows[2*t+1],1)},'By Board'!{self.rc2a1(rStart,13)}:{self.rc2a1(rStart+nSum-1,13)})"
+                ws.cell(row, t+2).value = sum
+                ws.cell(row, t+2).font = self.noChangeFont
+            rStart += nSum
+            row += 1
+        for c in range(3):
+            ws.cell(row-1,c+1).border = self.bottomLine
+        ws.cell(row, 2).value=f'=SUM({self.rc2a1(row-2,2)}:{self.rc2a1(row-1,2)})'
+        ws.cell(row, 2).font = self.noChangeFont
+        ws.cell(row, 3).value=f'=SUM({self.rc2a1(row-2,3)}:{self.rc2a1(row-1,3)})'
+        ws.cell(row, 3).font = self.noChangeFont
             
     # simple sign-up sheet, PDF
     def rosterPDF(self):
@@ -153,8 +179,8 @@ class TeamMatch(PairGames):
         # first row setup some spanning column headers
         mergeHdrs = [['Score', 2], ['', 1], ['Net', 2]]
 
-        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Result', 'NS', 'EW', 'IMP', 'NS', 'EW']
-        cStart = headers.index('Result') + 2
+        headers = ['Board', 'Round', 'Table', 'NS', 'EW', 'Vul', 'Contract', 'By', 'Made', 'Down', 'NS', 'EW', 'IMP', 'NS', 'EW']
+        cStart = headers.index('Down') + 2
         for h in mergeHdrs:
             sh.cell(1, cStart).value = h[0]
             sh.cell(1, cStart).font = self.noChangeFont
@@ -183,7 +209,7 @@ class TeamMatch(PairGames):
                 for i in range(2,7):
                     sh.cell(row, i).alignment = self.centerAlign
 
-                cIdx = headers.index('Result')+3
+                cIdx = headers.index('Down')+3
                 nIdx = cIdx + 2
                 self.computeIMP(sh, cIdx, 2, row, cursorRow, nIdx, -1)  # put *here*
                 self.computeNet(sh, row, cIdx-1, nIdx)
@@ -194,16 +220,11 @@ class TeamMatch(PairGames):
                 self.fakeScore(sh, row-1, cIdx-1, 1.0)
             for c in range(nIdx+1):
                 sh.cell(row-1,c+1).border = self.bottomLine
+        for c in [11, 13,14]:
+            for r in range(2,sh.max_row+1):
+                bd = sh.cell(r, c).border
+                sh.cell(r, c).border = Border(left=self.thinLine, bottom=bd.bottom)
         
-    def VPTable(self):
-        sh = self.wb['IMP Table']
-        sh.cell(1, 4).value = 'VP'
-        tau = (5**0.5 - 1)/2
-        tau3 = 1 - tau**3
-        vpb = 15 * len(self.boardData)**0.6
-        for row in range(sh.max_row-1):
-            sh.cell(row+2, 4).value = f"=10+10*(1-{tau}^(3*{self.rc2a1(row+2,3)}/{vpb}))/{tau3}"
-
     # Output into filesystem
     def save(self):
         import os
@@ -221,7 +242,6 @@ class TeamMatch(PairGames):
         self.Boards()
         self.IMPTable()
         self.ScoreTable()
-        self.VPTable()
         #self.idTags()
         #self.Travelers()  # PDF only
         self.Journal()  # pdf only
