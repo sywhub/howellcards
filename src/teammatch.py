@@ -3,14 +3,16 @@
 #   A PDF with Roster and Score sheets
 #   An Excel spreadsheet to enter the results and calculate the scores
 #
-# 4 Pairs (1, 2, 3, 4) are arranged into 2 teams (1 and 2, 3 and 4) and play each other.
-#   They sit at 2 tables: {NS: Team 1, EW: 3} {NS: Team 4, EW: Team 2}.
-#       Each table play n boards, then they exchange boards to play again.
-#       Then they exchage the oppoenents:{NS: Team 1, EW: 4} {NS: Team 3, EW: 2}.
-#       Play as before again.
-#       Technically, that's 4 rounds.
-#       The scoring diffreences are converted into IMPs and the one with higher IMP wins.
+#   4 pairs form 2 teams.  Team 1 = pair 1 & 2, Team 2 = pair 3 & 4
+#   They play two matches.  Each two rounds of "decks" boards.
+#   For each round, table 1 play a set of boards and table 2 the other
+#   After ward, playes stay at the same table. And play the boards the other table just played.
+#   That's a "match".
 #
+#   Second match, players change table to meet the "other pair" of the other taam.
+#   Repeat as above.  That's the 2nd and final match.
+#   
+#   Minimal boards to play is 4, meximal is 32.  Remember, always 4 rounds or 2 matches.
 #
 import argparse
 import logging
@@ -77,62 +79,84 @@ class TeamMatch(PairGames):
         row = self.sheetMeta(ws, metaData)
         ws.column_dimensions['B'].width = 30
         ws.column_dimensions['C'].width = 30
+        ws.column_dimensions['D'].width = 30
+        ws.column_dimensions['E'].width = 30
         row += 2
-        nSum = len(self.boardData) * len(self.boardData[0])
+        nSum = len(self.boardData) * len(self.boardData[0]) # number of rows to pick from
         tRows = []
-        for t in range(2):
+        for t in range(2):  # Team 1 & 2
             ws.cell(row, 2).font = self.HeaderFont
             ws.cell(row, 2).alignment = self.centerAlign
             ws.cell(row, 2).value = f'Team {t+1}'
             ws.merge_cells(f'{ws.cell(row,2).coordinate}:{ws.cell(row,3).coordinate}')
             row += 1
-            for p in range(2):
-                names = self.pairNames(t * 2 + p)
+            for p in range(2):  # Pair n & n+1 for each team
+                names = self.pairNames(t * 2 + p)   # load from "--name" command line option, if provided
                 ws.cell(row, 1).font = self.HeaderFont
                 ws.cell(row, 1).alignment = self.centerAlign
                 ws.cell(row, 1).value = 2 * t + p + 1
                 ws.cell(row, 2).value = names[0]
                 ws.cell(row, 3).value = names[1]
-                tRows.append(row)
+                tRows.append(row)   # remember which pairs are for which team
                 row += 1
             for c in range(3):
                 ws.cell(row-1,c+1).border = self.bottomLine
             row += 2
-        ws.cell(row, 1).font = self.HeaderFont
-        ws.cell(row, 1).alignment = self.centerAlign
-        ws.cell(row, 1).value = 'IMP Summary'
-        ws.merge_cells(f'{ws.cell(row,1).coordinate}:{ws.cell(row,3).coordinate}')
+        # Display tournament results
+        # First the headers
+        ws.cell(row, 2).font = self.HeaderFont
+        ws.cell(row, 2).alignment = self.centerAlign
+        ws.cell(row, 2).value = 'IMP Summary'
+        ws.merge_cells(f'{ws.cell(row,2).coordinate}:{ws.cell(row,3).coordinate}')
+        ws.cell(row, 4).font = self.HeaderFont
+        ws.cell(row, 4).alignment = self.centerAlign
+        ws.cell(row, 4).value = 'VP Summary'
+        ws.merge_cells(f'{ws.cell(row,4).coordinate}:{ws.cell(row,5).coordinate}')
         row += 1
         i = 1
-        for h in ['Match', 'Team 1', 'Team 2']:
+        for h in ['Match'] + ['Team 1', 'Team 2'] * 2:
             ws.cell(row, i).font = self.HeaderFont
             ws.cell(row, i).alignment = self.centerAlign
             ws.cell(row, i).value = h
             i += 1
+
+        # Now compute VP sums and use them to compute VPs
         row += 1
         nSum //= 2
-        nBoards = len(self.boardData) // 2
         rStart = 3
         for m in range(2):
             ws.cell(row, 1).value = m+1
             for t in range(2):
+                # IMP for each "match"
+                # Team match needs only to sum the N-S pair's IMPs, the other table are their teammates
+                # The pairs of the team took turn sitting at N-S position.  We remembered their rounds above
                 sum =  f"=SUMIF('By Board'!{self.rc2a1(rStart,4)}:{self.rc2a1(rStart+nSum-1,4)},\"=\"&{self.rc2a1(tRows[2*t],1)},'By Board'!{self.rc2a1(rStart,13)}:{self.rc2a1(rStart+nSum-1,13)})"
                 sum += f"+SUMIF('By Board'!{self.rc2a1(rStart,4)}:{self.rc2a1(rStart+nSum-1,4)},\"=\"&{self.rc2a1(tRows[2*t+1],1)},'By Board'!{self.rc2a1(rStart,13)}:{self.rc2a1(rStart+nSum-1,13)})"
+                # Compute the VP for the winning side.  The losing side gets the remainder
+                opp = [5,4][t]
+                vp = f"=IF({self.rc2a1(row, t+2)}>=0,{self.VPFormula(self.rc2a1(row, t+2),nSum//2)},20-{self.rc2a1(row,opp)})"
                 ws.cell(row, t+2).value = sum
                 ws.cell(row, t+2).font = self.noChangeFont
+                ws.cell(row, t+2).number_format = "#0.0"
+                ws.cell(row, t+4).value = vp
+                ws.cell(row, t+4).font = self.noChangeFont
+                ws.cell(row, t+4).number_format = "#0.0"
             rStart += nSum
             row += 1
-        for c in range(3):
+        for c in range(5):
             ws.cell(row-1,c+1).border = self.bottomLine
-        ws.cell(row, 2).value=f'=SUM({self.rc2a1(row-2,2)}:{self.rc2a1(row-1,2)})'
-        ws.cell(row, 2).font = self.noChangeFont
-        ws.cell(row, 3).value=f'=SUM({self.rc2a1(row-2,3)}:{self.rc2a1(row-1,3)})'
-        ws.cell(row, 3).font = self.noChangeFont
-            
+        # Add up both IMP and VP
+        for c in range(4):
+            ws.cell(row, 2+c).value=f'=SUM({self.rc2a1(row-2,2+c)}:{self.rc2a1(row-1,2+c)})'
+            ws.cell(row, 2+c).font = self.noChangeFont
+            ws.cell(row, 2+c).number_format = "#0.0"
+                
     # simple sign-up sheet, PDF
+    # First the roster names
+    # Then the table information.
     def rosterPDF(self):
         self.pdf.headerFooter()
-        self.pdf.set_y(self.pdf.margin + self.pdf.lineHeight(self.pdf.font_size_pt) * 2)
+        self.pdf.set_y(self.pdf.margin + self.pdf.lineHeight(self.pdf.font_size_pt) * 4)
         for t in range(2):
             self.pdf.set_font(style='BI', size=self.pdf.rosterPt, family=self.pdf.serifFont)
             self.pdf.cell(w=self.pdf.epw, text=f'Team {t+1}', align='C')
@@ -150,7 +174,7 @@ class TeamMatch(PairGames):
                 self.pdf.cell(w=nameW, h=ht, text=names[1], align='C', border=1)
                 self.pdf.ln()
             self.pdf.set_y(self.pdf.get_y() + self.pdf.lineHeight(self.pdf.font_size_pt))
-        self.pdf.set_font_size(self.pdf.headerPt)
+        self.pdf.set_font_size(self.pdf.bigPt)
         ht = self.pdf.lineHeight(self.pdf.font_size_pt)
         xMargin = self.pdf.margin
         hdrs = ['Round', 'NS', 'EW', 'Boards']
@@ -160,6 +184,7 @@ class TeamMatch(PairGames):
         xMargin = (self.pdf.w - sum(tblCols)) / 2
         for t in range(2):
             self.pdf.set_x(xMargin)
+            self.pdf.set_font(style='BI')
             self.pdf.cell(h=ht, text=f'Table {t+1}')
             self.pdf.headerRow(xMargin, self.pdf.get_y(), tblCols, hdrs)
             self.pdf.set_font(style='')
@@ -175,6 +200,7 @@ class TeamMatch(PairGames):
                 self.pdf.ln()
             self.pdf.ln()
 
+    # Shreadsheet header
     def boardSheetHeaders(self, sh, nTbl):
         # first row setup some spanning column headers
         mergeHdrs = [['Score', 2], ['', 1], ['Net', 2]]
@@ -191,7 +217,7 @@ class TeamMatch(PairGames):
         return (row, headers)
         
     # Table of boards played, no PDF equivalent
-    # Team matches are always IMP and 2 tables.  It always uses traveler.
+    # Team matches are always IMP and 2 tables.
     def Boards(self):
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 1)
@@ -224,6 +250,51 @@ class TeamMatch(PairGames):
             for r in range(2,sh.max_row+1):
                 bd = sh.cell(r, c).border
                 sh.cell(r, c).border = Border(left=self.thinLine, bottom=bd.bottom)
+
+    # Generate a string that's an Excel VP formula
+    def VPFormula(self, impCell, bNum):
+        tau = (5.0**.5 - 1)/2
+        vpb = 15*(bNum**.5)
+        vpF = f'(10+10*((1-{tau}^(3*{impCell}/{vpb}))/(1-{tau}^3)))'
+        vp = f'IF({vpF}>=20,20,{vpF})'
+        return vp
+
+    # Directly compute VP
+    def VPCompute(self, impDiff, bNum):
+        tau = (5.0**.5 - 1)/2
+        vpb = 15*(bNum**.5)
+        vp = 10+10*((1-tau**(3*impDiff/vpb))/(1-tau**3))
+        if vp >= 20:
+            vp = 20
+        return vp
+
+    # Only for team matches, generate Victory Point scale table
+    # The roster actually does not use it.  It's for human references.
+    def VPTable(self):
+        sh = self.wb.create_sheet('VP Table')
+        sh.cell(1, 2).value = '20 Victory Point Scales'
+        sh.cell(1, 2).font = self.HeaderFont
+        sh.cell(1, 2).alignment = self.centerAlign
+        sh.merge_cells(f'{self.rc2a1(1,2)}:{self.rc2a1(1,10)}')
+        row = 2
+        col = 1
+        sh.cell(row, col).value = 'IMP'
+        for b in range(8,17):
+            col += 1
+            sh.cell(row, col).value = b
+        for c in range(col):
+            sh.cell(row, c+1).font = self.HeaderFont
+            sh.cell(row, c+1).alignment = self.centerAlign
+        row += 1
+        col = 1
+        for imp in range(61):
+            sh.cell(row, col).value = imp
+            for b in range(8, 17):
+                col += 1
+                sh.cell(row, col).value = self.VPCompute(imp, b)
+                sh.cell(row, col).number_format = "#0.00"
+            row += 1
+            col = 1
         
     # Output into filesystem
     def save(self):
@@ -241,9 +312,8 @@ class TeamMatch(PairGames):
         self.rosterPDF()
         self.Boards()
         self.IMPTable()
+        self.VPTable()
         self.ScoreTable()
-        #self.idTags()
-        #self.Travelers()  # PDF only
         self.Journal()  # pdf only
         self.save()
         return
