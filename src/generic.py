@@ -16,7 +16,7 @@ class GenericPDF(PairGames):
         super().__init__(None, 0)
         self.pdf = pdf.PDF()
         self.notice = 'For public domain. No rights reserved. Generated on'
-        self.pdf.HeaderFooterText(f'{self.notice} {datetime.date.today().strftime("%b %d, %Y")}.',' ')
+        self.pdf.HeaderFooterText()
         self.nPerPg = 4
     
     # placeholders to facilitate reusing code in PairGames
@@ -50,7 +50,7 @@ class GenericPDF(PairGames):
         jData = {}
         for pairNum in range(4):
             jData[pairNum] = []
-            for b in range(30):
+            for b in range(32):
                 jData[pairNum].append((b, None, None, None, None))
         self.JournalWithData(jData)
 

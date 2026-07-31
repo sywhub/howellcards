@@ -51,7 +51,7 @@ class PDF(FPDF):
         x = (self.w - linewidth) / 2
         return x
     
-    def HeaderFooterText(self, h, f):
+    def HeaderFooterText(self, h='', f=''):
         self.headerText = h
         self.footerText = f
 
