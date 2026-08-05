@@ -148,9 +148,9 @@ class DupBridge:
             sh.cell(row, col+1).value = f'={sh.cell(row-1,col+1).coordinate}-{penaltyTbl[0][0]}'
             sh.cell(row, col+2).value = f'={sh.cell(row-1,col+2).coordinate}-{penaltyTbl[2][down - 1 if down <= 4 else 3]}'
             sh.cell(row, col+3).value = f'={sh.cell(row,col+2).coordinate}*2'
-            sh.cell(row, col+4).value = f'={sh.cell(row-1,col+1).coordinate}-{penaltyTbl[1][0]}'
-            sh.cell(row, col+5).value = f'={sh.cell(row-1,col+2).coordinate}-{penaltyTbl[3][1]}'
-            sh.cell(row, col+6).value = f'={sh.cell(row,col+2).coordinate}*2'
+            sh.cell(row, col+4).value = f'={sh.cell(row-1,col+4).coordinate}-{penaltyTbl[1][0]}'
+            sh.cell(row, col+5).value = f'={sh.cell(row-1,col+5).coordinate}-{penaltyTbl[3][1]}'
+            sh.cell(row, col+6).value = f'={sh.cell(row,col+5).coordinate}*2'
             row += 1
 
     def placeHolderName(self):
