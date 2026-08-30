@@ -559,6 +559,7 @@ class PairGames(DupBridge):
             rData = sorted(data[id], key=lambda x: x[0])    # by round
             for half in range(2):   # two identical tags for each person of the pair
                 self.pdf.set_font(self.pdf.serifFont, style='B', size=self.pdf.headerPt)
+                self.pdf.set_font(self.pdf.chineseFont)
                 self.pdf.set_xy(leftMargin+cWidth*half, y)
                 self.pdf.cell(text=f"Pair: {self.pairID(id)}")
                 ty = y + self.pdf.lineHeight(self.pdf.font_size_pt)
@@ -704,7 +705,7 @@ class PairGames(DupBridge):
         self.log.debug('Saving by Board')
         sh = self.wb.create_sheet('By Board', 1)
         row, headers = self.boardSheetHeaders(sh)
-        rGap = (self.tables - self.pairs % 2) * self.decks    # Number of rows between each round
+        rGap = len(self.roundData[0]) * self.decks    # Number of rows between each round
         for b in sorted(self.boardData.keys()):
             sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign

@@ -140,7 +140,7 @@ class Howell(PairGames):
         row += 1
 
         divident = len(self.roundData) * len(self.roundData[0][0]['Board'])
-        divident *= len(self.boardData[0]) - (1 if self.boardData[0][0][2] != 0 else 2)
+        divident *= len(self.boardData[0]) - 1
         lastRow = 3
         for b in self.boardData.values():
             lastRow += len(b)
@@ -202,6 +202,7 @@ class Howell(PairGames):
         self.pdf.set_font(self.pdf.sansSerifFont, size=(self.pdf.bigPt if self.pairs < 19 else self.pdf.linePt)) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         names = ["", ""]
+        self.pdf.set_font(self.pdf.chineseFont)
         for i in range(self.pairs):
             names = self.pairNames(i)
             self.pdf.set_xy(leftM, y)
