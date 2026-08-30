@@ -195,20 +195,31 @@ class Howell(PairGames):
         y = self.pdf.get_y() + 2 * h
         self.pdf.set_xy(x, y)
         self.pdf.cell(text=title)
-        widths = [1, 2, 2]
+        widths = [0.5, 2, 2, 1]
         y +=  h
         leftM = (self.pdf.w - sum(widths)) / 2
         self.pdf.set_xy(leftM, y)
         self.pdf.set_font(self.pdf.sansSerifFont, size=(self.pdf.bigPt if self.pairs < 19 else self.pdf.linePt)) 
         h = self.pdf.lineHeight(self.pdf.font_size_pt)
         names = ["", ""]
+        firstSeats = self.roundData[0]
         self.pdf.set_font(self.pdf.chineseFont)
         for i in range(self.pairs):
+            sides = ['NS', 'EW']
+            found = False
+            for k,v in firstSeats.items():
+                for s in range(2):
+                    if v[sides[s]] == i + 1:
+                        tbl = [k, sides[s]]
+                        found = True
+                if found:
+                    break
             names = self.pairNames(i)
             self.pdf.set_xy(leftM, y)
             self.pdf.cell(widths[0], h, text=f'{self.pairN(i+1)}', align='C', border=1)
             self.pdf.cell(widths[1], h, text=names[0], align='C', border=1)
             self.pdf.cell(widths[2], h, text=names[1], align='C', border=1)
+            self.pdf.cell(widths[3], h, text=f'T{tbl[0]+1} {tbl[1]}', align='C', border=1)
             y += h
 
     def go(self):
