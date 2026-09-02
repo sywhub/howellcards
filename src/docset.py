@@ -710,6 +710,9 @@ class PairGames(DupBridge):
             sh.cell(row, 1).value = b+1     # board #
             sh.cell(row, 1).alignment = self.centerAlign
             nPlayed = len(self.boardData[b])    # # of times this board was played
+            tbl1 = [x for x in self.boardData[b] if x[1] == 0]
+            if len(tbl1) > 0 and self.ifSitout(tbl1[0][0],tbl1[0][2],tbl1[0][3]):
+                nPlayed -= 1
             cursorRow = 0
             for r in sorted(self.boardData[b], key=lambda x: x[2]): # (round, table, NS, EW)
                 sh.cell(row, 2).value = f"='By Round'!{self.rc2a1(r[0] * rGap + 3, 1)}"
@@ -726,11 +729,12 @@ class PairGames(DupBridge):
 
                 cIdx = headers.index('Made')+4
                 nIdx = cIdx + 7
-                self.computeNet(sh, row, cIdx-1, nIdx)
-                self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
-                self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
-                if self.fake:
-                    self.fakeScore(sh, row, cIdx-1)
+                if not self.ifSitout(r[1], r[2], r[3]):
+                    self.computeNet(sh, row, cIdx-1, nIdx)
+                    self.computeIMP(sh, cIdx, nPlayed, row, cursorRow, nIdx)
+                    self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
+                    if self.fake:
+                        self.fakeScore(sh, row, cIdx-1)
                 row += 1
                 cursorRow += 1
             for c in range(len(headers)+(self.tables-1)*4-4):
