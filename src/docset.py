@@ -653,6 +653,9 @@ class PairGames(DupBridge):
     # Common function to print a row of "headers" stylistically
     def boardSheetHeaders(self, sh):
         nPlayed = len(self.boardData[0])
+        if self.ifSitout(0, self.roundData[0][0]['NS'], self.roundData[0][0]['EW']):
+            nPlayed -= 1
+
         # first row setup some spanning column headers
         mergeHdrs = [['Result', 2], ['Score', 2], ['IMP', 2], ['MP %', 2], ['MP Pts', 2], ['Net', 2],
                ['MP Calculation', nPlayed*2 - 2],['IMP Calculation', nPlayed*2 - 2]]
@@ -675,6 +678,8 @@ class PairGames(DupBridge):
         vertical.append(vertical[-1] + 6)
         vertical.append(vertical[-1] + 2)
         vertical.append(vertical[-1] + (len(self.boardData[0]) - 1)*2) 
+        if self.ifSitout(0, self.roundData[0][0]['NS'], self.roundData[0][0]['EW']):
+            vertical[-1] -= 2
         for c in vertical:
             for r in range(2,sh.max_row+1):
                 bd = sh.cell(r, c).border
@@ -735,8 +740,8 @@ class PairGames(DupBridge):
                     self.computeMP(sh, cIdx+2, nPlayed, row, cursorRow, nIdx)
                     if self.fake:
                         self.fakeScore(sh, row, cIdx-1)
+                    cursorRow += 1
                 row += 1
-                cursorRow += 1
             for c in range(len(headers)+(self.tables-1)*4-4):
                 sh.cell(row-1, c+1).border = self.bottomLine
         self.boardVerticals(sh, headers)
