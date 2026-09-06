@@ -74,7 +74,7 @@ class RoomSq:
                 self.jIO.sortByBoard()
                 self.jIO.showArrangement()
                 self.save2file(fname)
-                break
+                #break
             self.jIO.resetTournament()
         return valid
 
